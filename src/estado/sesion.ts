@@ -3,7 +3,8 @@ import { ConexionSfu, type FlujosPorPersona } from "@/red/ConexionSfu";
 import type { MensajeServidor, ServidorIce } from "@/red/protocolo";
 import { componerServidoresIce } from "@/red/servidoresIce";
 import { useReunion, LOCAL_INICIAL } from "./useReunion";
-import { pistasLocales, recuperarPistas, soltarMedios } from "./controlesLocales";
+import { alternarCamara, alternarMicrofono, pausarCamaraSiOculta, pistasLocales, recuperarPistas, soltarMedios } from "./controlesLocales";
+import { anunciarLlamada, reflejarEstadoLlamada, terminarLlamada } from "@/medios/sesionMultimedia";
 import { sonarEntrada, sonarSalida } from "@/medios/sonidos";
 import { mantenerPantallaEncendida, soltarPantallaEncendida } from "@/medios/pantallaEncendida";
 
@@ -13,8 +14,8 @@ import { mantenerPantallaEncendida, soltarPantallaEncendida } from "@/medios/pan
  *
  * En el celular la conexión se corta a menudo sin querer: al bloquear la pantalla, cambiar de app o
  * de red. Entonces se reconecta con la clave de la conexión anterior y el servidor nos devuelve el
- * mismo sitio (los demás solo ven «Reconectando…» un momento). Mientras la página está oculta no se
- * gastan reintentos: se reconecta en cuanto vuelve a verse.
+ * mismo sitio (los demás solo ven «Reconectando…» un momento). Con la página oculta se sigue
+ * intentando sin rendirse, y al volver a verse se reconecta al instante.
  */
 const RENDIRSE_TRAS_MS = 3 * 60_000;
 const ESPERA_PONG_MS = 3500;
@@ -92,6 +93,8 @@ function alRecibir(mensaje: MensajeServidor): void {
       s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9, clave: mensaje.clave ?? null, maximoArchivoMB: mensaje.maximoArchivoMB || 95 });
       medios = crearMedios();
       ajustarCalidad();
+      anunciarLlamada(mensaje.sala, { alternarMicrofono: () => void alternarMicrofono(), alternarCamara: () => void alternarCamara(), colgar: salir });
+      reflejarEstadoLlamada(s.local.microfono, s.local.camara);
       return;
     case "ENTRO":
       s.agregarParticipante(mensaje.participante);
@@ -164,8 +167,9 @@ function alCerrar(inesperado: boolean): void {
 function programarReintento(): void {
   if (temporizadorReintento) clearTimeout(temporizadorReintento);
   temporizadorReintento = null;
-  if (document.hidden) return; // se reintenta al volver a la página (ver alVolver)
-  if (caidaDesde !== null && Date.now() - caidaDesde > RENDIRSE_TRAS_MS) {
+  // Con la página oculta se sigue intentando (Android mantiene la llamada con la pantalla bloqueada),
+  // pero sin rendirse nunca: en iOS el navegador está dormido y se reintenta al volver (alVolver).
+  if (!document.hidden && caidaDesde !== null && Date.now() - caidaDesde > RENDIRSE_TRAS_MS) {
     estado().fijar({ fase: "error", error: "Se perdió la conexión con el servidor de la reunión." });
     return;
   }
@@ -212,7 +216,12 @@ function comprobarConexion(): Promise<boolean> {
 /** La página vuelve a verse (se desbloqueó el celular, se volvió a la app) o volvió la red. */
 async function alVolver(): Promise<void> {
   const s = estado();
-  if (document.hidden || (s.fase !== "reunion" && s.fase !== "reconectando")) return;
+  if (s.fase !== "reunion" && s.fase !== "reconectando") return;
+  if (document.hidden) {
+    await pausarCamaraSiOculta(true); // el audio sigue: se puede hablar con el celular bloqueado
+    return;
+  }
+  await pausarCamaraSiOculta(false);
   await recuperarPistas(); // iOS apaga cámara y micrófono en segundo plano
   void mantenerPantallaEncendida();
   if (s.fase === "reconectando") {
@@ -227,6 +236,11 @@ async function alVolver(): Promise<void> {
 }
 
 if (typeof window !== "undefined") {
+  useReunion.subscribe((actual, previo) => {
+    if (actual.local.microfono !== previo.local.microfono || actual.local.camara !== previo.local.camara) {
+      reflejarEstadoLlamada(actual.local.microfono, actual.local.camara);
+    }
+  });
   document.addEventListener("visibilitychange", () => void alVolver());
   window.addEventListener("online", () => void alVolver());
   window.addEventListener("pageshow", (evento) => evento.persisted && void alVolver());
@@ -251,6 +265,7 @@ function cerrarTodo(): void {
   if (temporizadorReintento) clearTimeout(temporizadorReintento);
   temporizadorReintento = null;
   void soltarPantallaEncendida();
+  terminarLlamada();
   cliente?.cerrar();
   cliente = null;
   medios?.cerrar();

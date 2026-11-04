@@ -82,6 +82,22 @@ export async function recuperarPistas(): Promise<void> {
   }
 }
 
+/** En el celular la cámara se apaga mientras la página está oculta y vuelve sola al regresar. */
+let camaraEnPausa = false;
+const esCelular = () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
+export async function pausarCamaraSiOculta(oculta: boolean): Promise<void> {
+  if (oculta) {
+    if (esCelular() && estado().local.camara) {
+      camaraEnPausa = true;
+      await fijarCamara(false);
+    }
+  } else if (camaraEnPausa) {
+    camaraEnPausa = false;
+    await fijarCamara(true);
+  }
+}
+
 export const alternarMicrofono = () => fijarMicrofono(!estado().local.microfono);
 export const alternarCamara = () => fijarCamara(!estado().local.camara);
 
