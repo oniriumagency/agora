@@ -68,6 +68,9 @@ export const IconoPantallaCompleta = (p: Props) => (
 export const IconoSalirPantallaCompleta = (p: Props) => (
   <Base {...p}><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" /></Base>
 );
+export const IconoExpulsar = (p: Props) => (
+  <Base {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="m17 8 5 5M22 8l-5 5" /></Base>
+);
 export const IconoCerrar = (p: Props) => (
   <Base {...p}><path d="M18 6 6 18M6 6l12 12" /></Base>
 );

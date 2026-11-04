@@ -28,6 +28,8 @@ interface EstadoReunion {
   /** Secreto de esta conexión para subir archivos al chat. */
   clave: string | null;
   maximoArchivoMB: number;
+  /** Id de quien modera la reunión (puede silenciar y expulsar). */
+  anfitrion: string | null;
   pagina: number;
   /** Problema con el audio y el vídeo (la reunión sigue: chat, mano, etc.). */
   avisoMedios: string | null;
@@ -84,6 +86,7 @@ export const useReunion = create<EstadoReunion>((set) => ({
   maximoVideos: 9,
   clave: null,
   maximoArchivoMB: 95,
+  anfitrion: null,
   pagina: 0,
   avisoMedios: null,
 

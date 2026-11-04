@@ -143,6 +143,8 @@ func (s *Servidor) despachar(p *Participante, m *MensajeEntrante) {
 			return
 		}
 		sala.difundir(M{"tipo": "REACCION", "id": p.id, "emoji": m.Emoji}, "")
+	case "MODERAR":
+		s.moderar(p, m.Accion, m.ID)
 	case "SUSCRIBIR":
 		if len(m.Videos) > 200 {
 			return
@@ -166,6 +168,9 @@ func (s *Servidor) unirse(p *Participante, m *MensajeEntrante) {
 	if !salaValida(m.Sala) || nombre == "" || m.Estado == nil {
 		errorA(p, "MENSAJE_INVALIDO", "Código de reunión o nombre no válidos.")
 		return
+	}
+	if len(m.Dispositivo) <= 64 {
+		p.dispositivo = m.Dispositivo
 	}
 	if m.Reanudar != "" && s.reanudar(p, m, nombre) {
 		return

@@ -18,6 +18,10 @@ type Sala struct {
 	mu       sync.Mutex
 	miembros map[string]*Participante
 	chat     []MensajeChat
+	// anfitrion: quien abrió la reunión (o el siguiente en llegar si se fue). Puede silenciar y expulsar.
+	anfitrion string
+	// vetados: dispositivos expulsados; no pueden volver a esta reunión mientras exista.
+	vetados map[string]bool
 }
 
 func nuevoID() string {

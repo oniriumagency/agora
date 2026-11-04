@@ -79,6 +79,7 @@ func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) 
 	p.datos.Estado.Pantalla = m.Estado.Pantalla
 	p.datos.Estado.Ausente = false
 	p.deseados, p.suscrito = anterior.deseados, anterior.suscrito
+	p.dispositivo = anterior.dispositivo
 	p.sala = sala
 	sala.miembros[p.id] = p
 	presentes := make([]DatosParticipante, 0, len(sala.miembros))
@@ -89,6 +90,7 @@ func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) 
 	}
 	chat := append([]MensajeChat{}, sala.chat...)
 	estado := p.datos.Estado
+	anfitrion := sala.anfitrion
 	sala.mu.Unlock()
 
 	p.clave = anterior.clave
@@ -100,7 +102,7 @@ func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) 
 	_ = anterior.conn.Close()
 
 	p.enviar(M{"tipo": "BIENVENIDA", "miId": p.id, "sala": sala.codigo, "participantes": presentes, "chat": chat, "maximoVideos": s.config.maximoVideos,
-		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "reanudada": true})
+		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "reanudada": true, "anfitrion": anfitrion})
 	sala.difundir(M{"tipo": "ESTADO", "id": p.id, "estado": estado}, p.id)
 	sala.actualizarResto(p.id)
 	log.Printf("[Sala %s] %s volvió a conectarse", sala.codigo, p.datos.Nombre)

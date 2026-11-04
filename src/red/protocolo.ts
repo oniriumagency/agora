@@ -75,7 +75,8 @@ export interface CambiosEstado {
 }
 
 export type MensajeCliente =
-  | { tipo: "UNIRSE"; sala: string; nombre: string; estado: { microfono: boolean; camara: boolean; pantalla: boolean }; reanudar?: string }
+  | { tipo: "UNIRSE"; sala: string; nombre: string; estado: { microfono: boolean; camara: boolean; pantalla: boolean }; reanudar?: string; dispositivo: string }
+  | { tipo: "MODERAR"; accion: "silenciar" | "expulsar"; id: string }
   | { tipo: "SALIR" }
   | { tipo: "PING" }
   | { tipo: "SENAL"; carga: CargaSenal }
@@ -86,7 +87,10 @@ export type MensajeCliente =
 
 export type MensajeServidor =
   | { tipo: "SERVIDORES_ICE"; servidores: ServidorIce[] }
-  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number; reanudada?: boolean }
+  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number; reanudada?: boolean; anfitrion: string }
+  | { tipo: "ANFITRION"; id: string }
+  | { tipo: "SILENCIADO"; por: string }
+  | { tipo: "EXPULSADO"; por: string }
   | { tipo: "PONG" }
   | { tipo: "ENTRO"; participante: Participante }
   | { tipo: "SALIO"; id: string }

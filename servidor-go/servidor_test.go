@@ -198,3 +198,57 @@ func TestReconexionGuardaElSitio(t *testing.T) {
 	carla.conn.UnderlyingConn().Close()
 	beto.esperar("SALIO")
 }
+
+func TestAnfitrionSilenciaYExpulsa(t *testing.T) {
+	api, cerrar, err := crearAPI(18093, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cerrar()
+	s := nuevoServidor(Config{carpetaDatos: t.TempDir(), maximoPorSala: 5, maximoVideos: 9, maximoSalas: 5, maximoConexiones: 10}, api)
+	s.fijarIce(nil)
+	prueba := httptest.NewServer(s.rutas(manejadorWeb()))
+	defer prueba.Close()
+	url := "ws" + strings.TrimPrefix(prueba.URL, "http") + "/senal"
+	conectar := func(nombre, dispositivo string) *clientePrueba {
+		conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := &clientePrueba{conn, t}
+		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-mod", "nombre": nombre, "dispositivo": dispositivo, "estado": M{"microfono": true, "camara": false}})
+		return c
+	}
+	ana := conectar("Ana", "disp-ana")
+	idAna := ana.esperar("BIENVENIDA")["miId"]
+	beto := conectar("Beto", "disp-beto")
+	b := beto.esperar("BIENVENIDA")
+	idBeto := b["miId"]
+	if b["anfitrion"] != idAna {
+		t.Fatalf("la anfitriona debería ser Ana: %v", b["anfitrion"])
+	}
+	ana.esperar("ENTRO")
+	beto.enviar(M{"tipo": "MODERAR", "accion": "expulsar", "id": idAna})
+	if codigo := beto.esperar("ERROR")["codigo"]; codigo != "NO_ANFITRION" {
+		t.Fatalf("Beto no es anfitrión: %v", codigo)
+	}
+	ana.enviar(M{"tipo": "MODERAR", "accion": "silenciar", "id": idBeto})
+	beto.esperar("SILENCIADO")
+	if e := ana.esperar("ESTADO")["estado"].(map[string]any); e["microfono"] != false {
+		t.Fatal("no quedó silenciado")
+	}
+	ana.enviar(M{"tipo": "MODERAR", "accion": "expulsar", "id": idBeto})
+	beto.esperar("EXPULSADO")
+	ana.esperar("SALIO")
+	otra := conectar("Beto", "disp-beto")
+	if codigo := otra.esperar("ERROR")["codigo"]; codigo != "EXPULSADO" {
+		t.Fatalf("el expulsado volvió a entrar: %v", codigo)
+	}
+	// Si la anfitriona se va, pasa al siguiente
+	carla := conectar("Carla", "disp-carla")
+	carla.esperar("BIENVENIDA")
+	ana.enviar(M{"tipo": "SALIR"})
+	if id := carla.esperar("ANFITRION")["id"]; id == idAna || id == nil {
+		t.Fatalf("anfitrión nuevo = %v", id)
+	}
+}

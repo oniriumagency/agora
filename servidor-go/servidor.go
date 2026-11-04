@@ -68,6 +68,10 @@ func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
 	s.mu.Unlock()
 
 	sala.mu.Lock()
+	if p.dispositivo != "" && sala.vetados[p.dispositivo] {
+		sala.mu.Unlock()
+		return "EXPULSADO", "El anfitrión te sacó de esta reunión."
+	}
 	if len(sala.miembros) >= s.config.maximoPorSala {
 		sala.mu.Unlock()
 		return "SALA_LLENA", "La reunión está completa."
@@ -79,6 +83,10 @@ func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
 	chat := append([]MensajeChat{}, sala.chat...)
 	p.sala = sala
 	sala.miembros[p.id] = p
+	if sala.anfitrion == "" || sala.miembros[sala.anfitrion] == nil {
+		sala.anfitrion = p.id
+	}
+	anfitrion := sala.anfitrion
 	sala.mu.Unlock()
 
 	p.clave = nuevoID()
@@ -86,7 +94,7 @@ func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
 	s.claves[p.clave] = p
 	s.mu.Unlock()
 	p.enviar(M{"tipo": "BIENVENIDA", "miId": p.id, "sala": codigo, "participantes": presentes, "chat": chat, "maximoVideos": s.config.maximoVideos,
-		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB})
+		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "anfitrion": anfitrion})
 	sala.difundir(M{"tipo": "ENTRO", "participante": p.datos}, p.id)
 	log.Printf("[Sala %s] Entró %s (%d personas)", codigo, p.datos.Nombre, len(presentes)+1)
 	return "", ""
@@ -110,12 +118,30 @@ func (s *Servidor) salir(p *Participante) {
 		delete(sala.miembros, p.id)
 	}
 	quedan := len(sala.miembros)
+	nuevoAnfitrion := ""
+	if estaba && sala.anfitrion == p.id {
+		// Pasa a quien lleva más tiempo en la reunión
+		var siguiente *Participante
+		for _, q := range sala.miembros {
+			if siguiente == nil || q.datos.EntradaEn < siguiente.datos.EntradaEn {
+				siguiente = q
+			}
+		}
+		sala.anfitrion = ""
+		if siguiente != nil {
+			sala.anfitrion = siguiente.id
+			nuevoAnfitrion = siguiente.id
+		}
+	}
 	sala.mu.Unlock()
 	if !estaba {
 		return
 	}
 	log.Printf("[Sala %s] Salió %s (%d personas)", sala.codigo, p.datos.Nombre, quedan)
 	sala.difundir(M{"tipo": "SALIO", "id": p.id}, "")
+	if nuevoAnfitrion != "" {
+		sala.difundir(M{"tipo": "ANFITRION", "id": nuevoAnfitrion}, "")
+	}
 	sala.actualizarResto("")
 	if quedan == 0 {
 		s.mu.Lock()

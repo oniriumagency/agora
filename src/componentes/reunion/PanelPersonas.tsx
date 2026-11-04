@@ -1,8 +1,9 @@
 "use client";
 import { alternarMano } from "@/estado/controlesLocales";
+import { moderar } from "@/estado/sesion";
 import { useReunion } from "@/estado/useReunion";
 import { Avatar } from "../comunes/Avatar";
-import { IconoMano, IconoMicro, IconoMicroOff, IconoPresentar } from "../comunes/Iconos";
+import { IconoExpulsar, IconoMano, IconoMicro, IconoMicroOff, IconoPresentar } from "../comunes/Iconos";
 
 /** Lista de personas: primero las manos levantadas (por orden de llegada) y después todos. */
 interface Fila {
@@ -19,6 +20,12 @@ export function PanelPersonas() {
   const miNombre = useReunion((estado) => estado.miNombre);
   const miId = useReunion((estado) => estado.miId) ?? "yo";
   const participantes = useReunion((estado) => estado.participantes);
+  const anfitrion = useReunion((estado) => estado.anfitrion);
+  const soyAnfitrion = anfitrion !== null && anfitrion === miId;
+
+  function expulsar(fila: Fila) {
+    if (window.confirm(`¿Sacar a ${fila.nombre} de la reunión? No podrá volver a entrar a esta reunión.`)) moderar("expulsar", fila.id);
+  }
 
   const filas: Fila[] = [
     { id: miId, nombre: miNombre, esLocal: true, microfono: local.microfono, pantalla: local.pantalla, mano: local.mano },
@@ -34,7 +41,30 @@ export function PanelPersonas() {
       <span className="min-w-0 flex-1 truncate text-sm">
         {fila.nombre}
         {fila.esLocal && <span className="text-gray-500"> (Tú)</span>}
+        {fila.id === anfitrion && <span className="block text-xs text-oro-hondo">Anfitrión</span>}
       </span>
+      {soyAnfitrion && !fila.esLocal && !conMano && (
+        <span className="flex gap-1">
+          {fila.microfono && (
+            <button
+              onClick={() => moderar("silenciar", fila.id)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100"
+              title="Silenciar su micrófono"
+              aria-label={`Silenciar a ${fila.nombre}`}
+            >
+              <IconoMicroOff tam={18} />
+            </button>
+          )}
+          <button
+            onClick={() => expulsar(fila)}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-peligro-fuerte hover:bg-peligro/10"
+            title="Sacar de la reunión"
+            aria-label={`Sacar a ${fila.nombre} de la reunión`}
+          >
+            <IconoExpulsar tam={18} />
+          </button>
+        </span>
+      )}
       {fila.pantalla && <IconoPresentar tam={18} className="text-gray-500" aria-label="Presentando" />}
       {conMano && fila.esLocal ? (
         <button onClick={alternarMano} className="rounded-full px-3 py-1 text-xs font-medium text-acento-fuerte hover:bg-acento-suave/50">

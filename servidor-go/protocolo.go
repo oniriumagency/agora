@@ -62,12 +62,16 @@ type MensajeEntrante struct {
 		Pantalla  bool `json:"pantalla"`
 	} `json:"estado"`
 	// Reanudar: clave de una conexión anterior de esta misma persona para retomar su sitio.
-	Reanudar string          `json:"reanudar"`
-	Carga    *CargaSenal     `json:"carga"`
-	Cambios  json.RawMessage `json:"cambios"`
-	Texto    string          `json:"texto"`
-	Emoji    string          `json:"emoji"`
-	Videos   []string        `json:"videos"`
+	Reanudar string `json:"reanudar"`
+	// Dispositivo: identificador aleatorio guardado en el navegador (para no dejar volver a un expulsado).
+	Dispositivo string          `json:"dispositivo"`
+	Accion      string          `json:"accion"`
+	ID          string          `json:"id"`
+	Carga       *CargaSenal     `json:"carga"`
+	Cambios     json.RawMessage `json:"cambios"`
+	Texto       string          `json:"texto"`
+	Emoji       string          `json:"emoji"`
+	Videos      []string        `json:"videos"`
 }
 
 type CambiosEstado struct {

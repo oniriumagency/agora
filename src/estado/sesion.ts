@@ -3,7 +3,7 @@ import { ConexionSfu, type FlujosPorPersona } from "@/red/ConexionSfu";
 import type { MensajeServidor, ServidorIce } from "@/red/protocolo";
 import { componerServidoresIce } from "@/red/servidoresIce";
 import { useReunion, LOCAL_INICIAL } from "./useReunion";
-import { alternarCamara, alternarMicrofono, pausarCamaraSiOculta, pistasLocales, recuperarPistas, soltarMedios } from "./controlesLocales";
+import { alternarCamara, alternarMicrofono, fijarMicrofono, pausarCamaraSiOculta, pistasLocales, recuperarPistas, soltarMedios } from "./controlesLocales";
 import { anunciarLlamada, reflejarEstadoLlamada, terminarLlamada } from "@/medios/sesionMultimedia";
 import { sonarEntrada, sonarSalida } from "@/medios/sonidos";
 import { mantenerPantallaEncendida, soltarPantallaEncendida } from "@/medios/pantallaEncendida";
@@ -81,6 +81,18 @@ function alRecibir(mensaje: MensajeServidor): void {
     case "PONG":
       alPong?.();
       return;
+    case "ANFITRION":
+      s.fijar({ anfitrion: mensaje.id });
+      if (mensaje.id === s.miId) s.avisar("Ahora eres el anfitrión de la reunión", "👑");
+      return;
+    case "SILENCIADO":
+      void fijarMicrofono(false);
+      s.avisar(`${mensaje.por} silenció tu micrófono`, "🔇");
+      return;
+    case "EXPULSADO":
+      cerrarTodo();
+      s.fijar({ fase: "error", error: `${mensaje.por} (anfitrión) te sacó de la reunión.` });
+      return;
     case "BIENVENIDA":
       reintentos = 0;
       caidaDesde = null;
@@ -90,7 +102,7 @@ function alRecibir(mensaje: MensajeServidor): void {
       ultimosFlujos = {};
       ultimaSuscripcion = "";
       s.ponerParticipantes(mensaje.participantes);
-      s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9, clave: mensaje.clave ?? null, maximoArchivoMB: mensaje.maximoArchivoMB || 95 });
+      s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9, clave: mensaje.clave ?? null, maximoArchivoMB: mensaje.maximoArchivoMB || 95, anfitrion: mensaje.anfitrion ?? null });
       medios = crearMedios();
       ajustarCalidad();
       anunciarLlamada(mensaje.sala, { alternarMicrofono: () => void alternarMicrofono(), alternarCamara: () => void alternarCamara(), colgar: salir });
@@ -138,7 +150,7 @@ function alRecibir(mensaje: MensajeServidor): void {
       medios?.fijarMapa(mensaje.mapa);
       return;
     case "ERROR":
-      if (mensaje.codigo === "SALA_LLENA" || mensaje.codigo === "LIMITE_SALAS") {
+      if (mensaje.codigo === "SALA_LLENA" || mensaje.codigo === "LIMITE_SALAS" || mensaje.codigo === "EXPULSADO") {
         s.fijar({ fase: "error", error: mensaje.mensaje });
         cliente?.cerrar();
       } else console.warn(`[Servidor] ${mensaje.codigo}: ${mensaje.mensaje}`);
@@ -193,7 +205,27 @@ async function conectarYUnirse(): Promise<void> {
     nombre: miNombre,
     estado: { microfono: local.microfono, camara: local.camara, pantalla: local.pantalla },
     reanudar: fase === "reconectando" && claveAnterior ? claveAnterior : undefined,
+    dispositivo: idDispositivo(),
   });
+}
+
+/** Identificador aleatorio de este navegador: permite que un expulsado no vuelva a entrar. */
+function idDispositivo(): string {
+  try {
+    let id = localStorage.getItem("agora.dispositivo");
+    if (!id) {
+      id = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem("agora.dispositivo", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
+/** El anfitrión silencia o expulsa a alguien. */
+export function moderar(accion: "silenciar" | "expulsar", id: string): void {
+  cliente?.enviar({ tipo: "MODERAR", accion, id });
 }
 
 /** ¿Sigue viva la conexión? Al volver del segundo plano un WebSocket puede parecer abierto y estar muerto. */
@@ -271,7 +303,7 @@ function cerrarTodo(): void {
   medios?.cerrar();
   medios = null;
   soltarMedios();
-  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null, clave: null });
+  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null, clave: null, anfitrion: null });
 }
 
 /** Reintenta el audio y el vídeo volviendo a entrar en la reunión. */

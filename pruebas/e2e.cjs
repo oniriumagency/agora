@@ -114,8 +114,16 @@ async function videoVivo(pagina, textoEtiqueta) {
     comprobar(await videoVivo(beto, "Ana"), "Tras cortarse la conexión, Ana vuelve y Beto la ve de nuevo");
     comprobar(beto.__salidas === 0 && (await beto.locator("[data-tesela]", { hasText: "Ana" }).count()) >= 1, "Beto no vio salir a Ana durante el corte");
 
+    // Ana abrió la reunión: es la anfitriona y puede silenciar a Beto
+    await ana.getByRole("button", { name: /Personas/ }).first().click();
+    await ana.getByLabel("Silenciar a Beto").click();
+    await beto.getByText("Ana silenció tu micrófono").waitFor();
+    comprobar(true, "La anfitriona silencia el micrófono de Beto");
+
     await ana.getByLabel("Salir de la llamada").click();
     await beto.getByText("Ana salió de la reunión").waitFor();
+    await beto.getByText("Ahora eres el anfitrión de la reunión").waitFor();
+    comprobar(true, "Al irse la anfitriona, Beto pasa a ser anfitrión");
     comprobar(true, "Beto ve que Ana salió");
     console.log("Todas las comprobaciones pasaron.");
   } finally {
