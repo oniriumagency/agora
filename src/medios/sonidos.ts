@@ -85,6 +85,6 @@ function pulsar(frecuencias: number[], volumen: number): void {
 }
 
 /** Alguien entró: mi y si agudos (E5, B5). */
-export const sonarEntrada = () => pulsar([659.25, 987.77], 0.32);
+export const sonarEntrada = () => pulsar([659.25, 987.77], 0.13);
 /** Alguien salió: la y mi graves (A3, E3). */
-export const sonarSalida = () => pulsar([220, 164.81], 0.42);
+export const sonarSalida = () => pulsar([220, 164.81], 0.17);
