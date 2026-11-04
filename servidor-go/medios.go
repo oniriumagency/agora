@@ -18,8 +18,9 @@ var capacidadVideo = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, Clo
 var capacidadAudio = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2, SDPFmtpLine: "minptime=10;useinbandfec=1"}
 
 // crearAPI abre el puerto de medios (UDP y TCP) y devuelve la API de Pion. ipsPublicas se anuncian
-// como candidatos srflx (útil cuando el router redirige el puerto).
-func crearAPI(puertoMedios int, ipsPublicas []string) (*webrtc.API, func(), error) {
+// como candidatos srflx (útil cuando el router redirige el puerto). soloLocal escucha solo en
+// 127.0.0.1: lo usan las pruebas para que el Firewall de Windows no pregunte en cada ejecución.
+func crearAPI(puertoMedios int, ipsPublicas []string, soloLocal bool) (*webrtc.API, func(), error) {
 	m := &webrtc.MediaEngine{}
 	if err := m.RegisterCodec(webrtc.RTPCodecParameters{RTPCodecCapability: capacidadVideo, PayloadType: 96}, webrtc.RTPCodecTypeVideo); err != nil {
 		return nil, nil, err
@@ -32,11 +33,17 @@ func crearAPI(puertoMedios int, ipsPublicas []string) (*webrtc.API, func(), erro
 		return nil, nil, err
 	}
 
-	udp, err := ice.NewMultiUDPMuxFromPort(puertoMedios, ice.UDPMuxFromPortWithNetworks(ice.NetworkTypeUDP4), ice.UDPMuxFromPortWithLoopback())
+	opcionesUDP := []ice.UDPMuxFromPortOption{ice.UDPMuxFromPortWithNetworks(ice.NetworkTypeUDP4), ice.UDPMuxFromPortWithLoopback()}
+	ipEscucha := net.IPv4zero
+	if soloLocal {
+		opcionesUDP = append(opcionesUDP, ice.UDPMuxFromPortWithIPFilter(func(ip net.IP) bool { return ip.IsLoopback() }))
+		ipEscucha = net.IPv4(127, 0, 0, 1)
+	}
+	udp, err := ice.NewMultiUDPMuxFromPort(puertoMedios, opcionesUDP...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("no se pudo abrir el puerto %d/UDP: %w", puertoMedios, err)
 	}
-	escucha, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: puertoMedios})
+	escucha, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: ipEscucha, Port: puertoMedios})
 	if err != nil {
 		_ = udp.Close()
 		return nil, nil, fmt.Errorf("no se pudo abrir el puerto %d/TCP: %w", puertoMedios, err)

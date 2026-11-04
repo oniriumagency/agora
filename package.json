@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node scripts/desarrollo.mjs",
     "dev:web": "next dev -p 3100",
-    "servidor": "go run ./servidor-go --sin-tunel --sin-upnp --sin-firewall --sin-navegador",
+    
     "build": "next build",
     "exe": "node scripts/construirServidor.mjs",
     "typecheck": "tsc --noEmit -p .",

@@ -59,7 +59,7 @@ func main() {
 	iceInicial, _ := obtenerIceInicial(config.turnID, config.turnToken)
 	turnActivo = len(iceInicial) > 1
 	red := diagnosticarRed(config, turnActivo)
-	api, cerrarMedios, err := crearAPI(config.puertoMedios, red.ipsAnunciar)
+	api, cerrarMedios, err := crearAPI(config.puertoMedios, red.ipsAnunciar, false)
 	if err != nil {
 		fallar("%v. ¿Hay otro servidor abierto? Prueba con --puerto-medios.", err)
 	}

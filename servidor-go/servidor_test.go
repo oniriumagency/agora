@@ -63,7 +63,7 @@ func (c *clientePrueba) esperar(tipo string) map[string]any {
 }
 
 func TestSalaChatYEstado(t *testing.T) {
-	api, cerrar, err := crearAPI(18091, nil)
+	api, cerrar, err := crearAPI(18091, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestSalaChatYEstado(t *testing.T) {
 }
 
 func TestReconexionGuardaElSitio(t *testing.T) {
-	api, cerrar, err := crearAPI(18092, nil)
+	api, cerrar, err := crearAPI(18092, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestReconexionGuardaElSitio(t *testing.T) {
 }
 
 func TestAnfitrionSilenciaYExpulsa(t *testing.T) {
-	api, cerrar, err := crearAPI(18093, nil)
+	api, cerrar, err := crearAPI(18093, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
