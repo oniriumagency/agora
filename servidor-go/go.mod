@@ -1,4 +1,4 @@
-module kuboxmeet
+module agora
 
 go 1.26.0
 

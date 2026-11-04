@@ -19,7 +19,7 @@ export function Reunion() {
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-sala-fondo text-sala-texto">
       {fase === "reconectando" && (
-        <div className="bg-[#f9ab00] px-4 py-2 text-center text-sm font-medium text-gray-900" role="status">
+        <div className="bg-oro px-4 py-2 text-center text-sm font-medium text-gray-900" role="status">
           Se perdió la conexión con el servidor. Reconectando…
         </div>
       )}

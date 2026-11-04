@@ -6,6 +6,7 @@ package main
 import (
 	"embed"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os/exec"
 	"path"
@@ -46,4 +47,10 @@ func manejadorWeb() http.Handler {
 		}
 		archivos.ServeHTTP(w, r)
 	})
+}
+
+func init() {
+	// Tipos que la tabla de Go no trae y que la web usa (manifiesto e iconos, fuente de la marca)
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+	_ = mime.AddExtensionType(".woff2", "font/woff2")
 }

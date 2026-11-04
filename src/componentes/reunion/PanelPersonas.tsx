@@ -37,7 +37,7 @@ export function PanelPersonas() {
       </span>
       {fila.pantalla && <IconoPresentar tam={18} className="text-gray-500" aria-label="Presentando" />}
       {conMano && fila.esLocal ? (
-        <button onClick={alternarMano} className="rounded-full px-3 py-1 text-xs font-medium text-acento-fuerte hover:bg-blue-50">
+        <button onClick={alternarMano} className="rounded-full px-3 py-1 text-xs font-medium text-acento-fuerte hover:bg-acento-suave/50">
           Bajar
         </button>
       ) : fila.microfono ? (

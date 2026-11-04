@@ -10,3 +10,5 @@ pruebas/capturas/
 dist/
 servidor-go/web/*
 !servidor-go/web/LEEME.txt
+agora.env
+kubox-meet.env

@@ -143,7 +143,7 @@ func abrirUPnP(ctx context.Context, puertos []puertoAbrir) (*Mapeo, error) {
 		var hechos []puertoAbrir
 		var err error
 		for _, p := range puertos {
-			err = c.AddPortMappingCtx(ctx, "", uint16(p.puerto), p.protocolo, uint16(p.puerto), local, true, "Kubox Meet", 0)
+			err = c.AddPortMappingCtx(ctx, "", uint16(p.puerto), p.protocolo, uint16(p.puerto), local, true, "Agora", 0)
 			if err != nil {
 				break
 			}

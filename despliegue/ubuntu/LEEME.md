@@ -1,41 +1,54 @@
-# Kubox Meet en el Ubuntu de casa (opcional)
+# Ágora en la torre Ubuntu · agora.onirium.agency
 
-Lo normal es que quien organiza abra `KuboxMeetServidor.exe` en su PC. Si prefieres un servidor
-fijo en el Ubuntu, el mismo programa existe para Linux (`dist/kubox-meet-servidor-linux`).
+La torre ejecuta el servidor de Ágora como servicio (`agora`), que arranca solo al encender y se
+reinicia si se cae. Se publica por el mismo Cloudflare Tunnel de Kubox (`magne-homelab`), así que no
+hay que abrir puertos en el router (que tiene CGNAT). El vídeo atraviesa el CGNAT con el TURN de
+Cloudflare, igual que en Windows.
 
-En casa hay CGNAT, así que nadie de fuera puede llegar al puerto de vídeo del Ubuntu:
+## 1. Llevar el paquete a la torre
 
-- La **web y la señalización** entran por el Cloudflare Tunnel que ya usas, con dominio propio.
-- El **audio y el vídeo** van por el TURN de Cloudflare Realtime: los navegadores y el servidor se
-  encuentran en el relé. Sin `MEET_TURN_CLOUDFLARE_*` no funcionará desde fuera de tu red.
+En Windows, `D:\Kubox Meet\dist\agora-ubuntu.tar.gz` lleva el servidor, el instalador y la
+configuración. Cópialo a la torre (cambia `usuario@torre` por el tuyo):
 
+```powershell
+scp "D:\Kubox Meet\dist\agora-ubuntu.tar.gz" usuario@torre:
 ```
-navegador ─► Cloudflare (HTTPS) ─► cloudflared ─► 127.0.0.1:8090  Kubox Meet (web + señalización)
-navegador ◄──── vídeo ────► TURN de Cloudflare ◄────► Kubox Meet (SFU)
-```
 
-## Instalar
+Opcional: para no volver a pegar las claves TURN, copia también tu `kubox-meet.env` y ponlo dentro
+de la carpeta `agora` después de descomprimir.
 
-En tu PC: `npm run exe`. Copia al Ubuntu `dist/kubox-meet-servidor-linux` y esta carpeta. En el Ubuntu:
+## 2. Instalar (o actualizar)
 
 ```bash
-sudo mkdir -p /opt/kubox-meet
-sudo cp kubox-meet-servidor-linux /opt/kubox-meet/
-sudo cp kubox-meet.env.example /opt/kubox-meet/kubox-meet.env
-sudo nano /opt/kubox-meet/kubox-meet.env     # MEET_TURN_CLOUDFLARE_* y MEET_URL_PUBLICA=https://meet.onirium.agency
+tar xzf agora-ubuntu.tar.gz
+cd agora
 sudo bash instalar.sh
 ```
 
-En Cloudflare Zero Trust → Networks → Tunnels → `magne-homelab` → *Public Hostname*: subdominio
-`meet`, dominio `onirium.agency`, servicio `HTTP` → `localhost:8090` (una sola ruta: la web y
-`/senal` las sirve el mismo programa).
+Si no encuentra un `agora.env` o `kubox-meet.env` al lado, te pide las dos claves del TURN de
+Cloudflare (Realtime > TURN Server: *Turn Token ID* y *API Token*). Quedan en `/opt/agora/agora.env`,
+legible solo por el servicio.
 
-## Comprobar
+Para actualizar más adelante, repite lo mismo con el paquete nuevo: conserva la configuración.
+
+## 3. Publicar el subdominio (una sola vez)
+
+Cloudflare > Zero Trust > Networks > Tunnels > `magne-homelab` > **Public Hostname** > *Add a public hostname*:
+
+| Campo | Valor |
+|---|---|
+| Subdomain | `agora` |
+| Domain | `onirium.agency` |
+| Service | `HTTP` · `localhost:8090` |
+
+Cloudflare crea el registro DNS solo. Los WebSockets y las subidas de archivos (hasta 100 MB)
+funcionan con el plan gratis. Si `cloudflared` corre en otra máquina, pon la IP de la torre en
+lugar de `localhost`.
+
+## Día a día
 
 ```bash
-systemctl status kubox-meet-servidor
-journalctl -u kubox-meet-servidor -f     # entradas y salidas de cada reunión
-curl -s localhost:8090/salud              # ok
+systemctl status agora          # ¿está corriendo?
+journalctl -u agora -f          # registro en vivo (quién entra y sale)
+sudo systemctl restart agora    # reiniciar tras editar /opt/agora/agora.env
 ```
-
-Prueba desde el móvil con datos (no con el wifi de casa).

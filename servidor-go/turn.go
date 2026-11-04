@@ -1,6 +1,6 @@
 package main
 
-// Credenciales TURN temporales de Cloudflare Realtime (igual que en Kubox). Con ellas el vídeo
+// Credenciales TURN temporales de Cloudflare Realtime (como en Kubox). Con ellas el vídeo
 // funciona aunque el servidor esté tras CGNAT: navegadores y servidor se encuentran en el relé.
 
 import (

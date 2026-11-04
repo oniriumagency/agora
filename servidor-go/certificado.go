@@ -30,7 +30,7 @@ func certificadoLocal(carpeta string, ips []string) (tls.Certificate, error) {
 	serie, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
 	plantilla := x509.Certificate{
 		SerialNumber: serie,
-		Subject:      pkix.Name{CommonName: "Kubox Meet (red local)", Organization: []string{"Kubox Meet"}},
+		Subject:      pkix.Name{CommonName: "Ágora (red local)", Organization: []string{"Ágora"}},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().AddDate(1, 0, 0),
 		KeyUsage:     x509.KeyUsageDigitalSignature,

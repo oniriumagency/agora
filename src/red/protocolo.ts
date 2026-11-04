@@ -1,5 +1,5 @@
 /**
- * Protocolo entre la web y el servidor de Kubox Meet (espejo de servidor-go/protocolo.go).
+ * Protocolo entre la web y el servidor de Ágora (espejo de servidor-go/protocolo.go).
  *
  * El servidor es un SFU: cada participante mantiene una sola conexión WebRTC con él, le envía su
  * micrófono, cámara y pantalla, y recibe de él el audio y el vídeo de los demás por "ranuras". El

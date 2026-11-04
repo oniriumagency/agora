@@ -1,0 +1,25 @@
+# Ágora (web + señalización + servidor de vídeo) en la torre Ubuntu, detrás del Cloudflare Tunnel.
+[Unit]
+Description=Ágora - servidor de reuniones
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agora
+Group=agora
+WorkingDirectory=/opt/agora
+# Lee /opt/agora/agora.env (URL pública y TURN de Cloudflare).
+ExecStart=/opt/agora/agora-servidor-linux --sin-tunel --sin-navegador --sin-firewall --puerto-https 0
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CacheDirectory=Agora
+Environment=XDG_CACHE_HOME=/var/cache
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 type Variante = "normal" | "alerta" | "activo" | "colgar";
 
 const ESTILOS: Record<Variante, string> = {
-  normal: "bg-sala-tesela text-white hover:bg-[#4a4e52]",
+  normal: "bg-sala-tesela text-white hover:bg-sala-borde",
   alerta: "bg-peligro text-white hover:bg-peligro-fuerte",
-  activo: "bg-acento-suave text-[#062e6f] hover:bg-[#c2d7f8]",
+  activo: "bg-acento-suave text-gray-900 hover:bg-acento",
   colgar: "w-14 sm:w-16 bg-peligro text-white hover:bg-peligro-fuerte",
 };
 

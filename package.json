@@ -1,5 +1,5 @@
 {
-  "name": "kubox-meet",
+  "name": "agora",
   "version": "1.0.0",
   "private": true,
   "description": "Reuniones por vídeo con servidor propio (SFU en un .exe): chat, mano alzada y pantalla compartida",

@@ -1,12 +1,12 @@
-# Kubox Meet
+# Ágora
 
 Reuniones por vídeo al estilo Google Meet con **servidor propio**: cualquiera abre
-`KuboxMeetServidor.exe` en su PC, el programa prepara la red y muestra el enlace que hay que
+`AgoraServidor.exe` en su PC, el programa prepara la red y muestra el enlace que hay que
 compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compartida y reuniones grandes.
 
 ## Cómo se usa
 
-1. Abre `KuboxMeetServidor.exe` (doble clic). Al arrancar:
+1. Abre `AgoraServidor.exe` (doble clic). Al arrancar:
    - Pide permiso de administrador una vez para crear la regla del **Firewall de Windows**.
    - Intenta abrir el puerto de vídeo en el **router** (UPnP o NAT-PMP) y avisa si no puede o si
      hay **CGNAT** (entonces desde Internet hace falta TURN, ver abajo).
@@ -28,8 +28,8 @@ compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compart
 
 ### Si hay CGNAT (o el router no abre puertos)
 
-Crea `kubox-meet.env` junto al `.exe` con tu clave TURN de Cloudflare Realtime (la misma de Kubox
-sirve; plantilla en `despliegue/ubuntu/kubox-meet.env.example`):
+Crea `agora.env` junto al `.exe` con tu clave TURN de Cloudflare Realtime (la misma de Kubox
+sirve; plantilla en `despliegue/ubuntu/agora.env.example`):
 
 ```
 MEET_TURN_CLOUDFLARE_ID=...
@@ -73,13 +73,30 @@ Necesitas Node 22.18 o superior y Go 1.21 o superior (Go descarga solo la versi�
 ```bash
 npm install
 npm run dev      # servidor Go en :8090 y web con recarga en http://localhost:3100
-npm run exe      # dist/KuboxMeetServidor.exe y dist/kubox-meet-servidor-linux
+npm run exe      # dist/AgoraServidor.exe y dist/agora-servidor-linux
 npm test         # pruebas del servidor (Go)
 npm run test:e2e # dos navegadores contra http://localhost:8090 (requiere Playwright)
 node pruebas/e2e-grande.cjs http://localhost:8090 12   # reunión de 12 con paginación
 ```
 
-Opciones del servidor: `KuboxMeetServidor.exe --help` (puertos, sin túnel, sin UPnP, URL pública
+Opciones del servidor: `AgoraServidor.exe --help` (puertos, sin túnel, sin UPnP, URL pública
 propia, máximos por sala…).
 
 Para publicarlo en el Ubuntu de casa: [`despliegue/ubuntu/LEEME.md`](despliegue/ubuntu/LEEME.md).
+
+## Identidad
+
+*Ágora* era la plaza donde los griegos se reunían a conversar y decidir. El símbolo es un
+anfiteatro visto desde arriba (gradas y pasillos, que también se leen como ondas de voz) con el
+escenario en oro. Archivos en `marca/`; la paleta está en `tailwind.config.js`:
+
+| Color | Uso | Hex |
+|---|---|---|
+| Azul egeo | acento, botones | `#1F5FA6` · claro `#8DBFEA` |
+| Noche del Egeo | fondo de la sala | `#0F1B2D` · superficies `#18293F`, `#22385A` |
+| Mármol | páginas claras, texto sobre oscuro | `#FAF7F1` · `#F3EEE3` |
+| Oro de ánfora | detalles, greca, avisos | `#D9AE4E` |
+| Terracota | colgar, errores | `#D0603B` |
+| Olivo | apoyo | `#7D8B4E` |
+
+Tipografía de marca: Cinzel (letras de inscripción clásica, licencia OFL), solo en el logotipo.

@@ -22,7 +22,7 @@ export function BotonCopiarEnlace({ oscuro = false }: { oscuro?: boolean }) {
   return (
     <button
       onClick={() => void copiar()}
-      className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${oscuro ? "text-acento hover:bg-white/10" : "text-acento-fuerte hover:bg-blue-50"}`}
+      className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${oscuro ? "text-acento hover:bg-white/10" : "text-acento-fuerte hover:bg-acento-suave/50"}`}
     >
       <IconoCopiar tam={18} /> {copiado ? "Enlace copiado" : "Copiar enlace de la reunión"}
     </button>

@@ -13,7 +13,7 @@ import (
 	"syscall"
 )
 
-const nombreRegla = "Kubox Meet"
+const nombreRegla = "Agora"
 
 func ocultarVentana(cmd *exec.Cmd) *exec.Cmd {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}

@@ -10,7 +10,7 @@ import (
 )
 
 // Config: opciones de línea de órdenes, con valores por defecto pensados para hacer doble clic en
-// el .exe. Las claves secretas (TURN de Cloudflare) se leen de kubox-meet.env junto al ejecutable.
+// el .exe. Las claves secretas (TURN de Cloudflare) se leen de agora.env junto al ejecutable.
 type Config struct {
 	puertoWeb        int
 	puertoHTTPS      int
@@ -75,15 +75,15 @@ func carpetaDatos() string {
 	if err != nil {
 		base = carpetaEjecutable()
 	}
-	dir := filepath.Join(base, "KuboxMeet")
+	dir := filepath.Join(base, "Agora")
 	_ = os.MkdirAll(dir, 0o755)
 	return dir
 }
 
-// cargarArchivoEntorno lee CLAVE=valor de kubox-meet.env (junto al .exe o en la carpeta actual)
-// sin pisar variables ya definidas.
+// cargarArchivoEntorno lee CLAVE=valor de agora.env (junto al .exe o en la carpeta actual)
+// sin pisar variables ya definidas. También acepta kubox-meet.env, el nombre anterior.
 func cargarArchivoEntorno() {
-	for _, ruta := range []string{filepath.Join(carpetaEjecutable(), "kubox-meet.env"), "kubox-meet.env", ".env.local"} {
+	for _, ruta := range []string{filepath.Join(carpetaEjecutable(), "agora.env"), filepath.Join(carpetaEjecutable(), "kubox-meet.env"), "agora.env", "kubox-meet.env", ".env.local"} {
 		archivo, err := os.Open(ruta)
 		if err != nil {
 			continue

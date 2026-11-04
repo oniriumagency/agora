@@ -1,5 +1,5 @@
 /** Círculo con la inicial del nombre; el color se deriva del nombre para que sea estable. */
-const COLORES = ["#1a73e8", "#e8710a", "#188038", "#d93025", "#9334e6", "#12b5cb", "#e52592", "#7b5e57"];
+const COLORES = ["#1F5FA6", "#B44B27", "#6B7A3E", "#A9822C", "#2E7F86", "#8A4F7D", "#4B6385", "#9A5B3C"]; // egeo, terracota, olivo, oro, turquesa, púrpura de Tiro, piedra, arcilla
 
 export function colorDe(nombre: string): string {
   let suma = 0;

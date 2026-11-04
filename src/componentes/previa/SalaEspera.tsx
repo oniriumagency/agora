@@ -10,8 +10,8 @@ import { SelectorDispositivos } from "./SelectorDispositivos";
 import { VistaPrevia } from "./VistaPrevia";
 
 /** Sala de espera: vista previa de cámara y micrófono, nombre y botón para entrar. */
-const CLAVE_NOMBRE = "kuboxMeet.nombre";
-const CLAVE_PREFERENCIAS = "kuboxMeet.medios";
+const CLAVE_NOMBRE = "agora.nombre";
+const CLAVE_PREFERENCIAS = "agora.medios";
 
 function leer(clave: string): string | null {
   try {
@@ -69,7 +69,7 @@ export function SalaEspera({ codigo }: { codigo: string }) {
           />
           <button
             disabled={!nombre.trim()}
-            className="h-12 w-full rounded-full bg-acento-fuerte px-6 font-medium text-white shadow-sm transition hover:bg-[#1765cc] hover:shadow-md disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
+            className="h-12 w-full rounded-full bg-acento-fuerte px-6 font-medium text-white shadow-sm transition hover:bg-acento-hondo hover:shadow-md disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
           >
             Unirse ahora
           </button>

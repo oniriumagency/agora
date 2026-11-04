@@ -140,7 +140,7 @@ func nuevaRanura(tipo string, numero int) (*Ranura, error) {
 	if tipo == "audio" {
 		capacidad = capacidadAudio
 	}
-	local, err := webrtc.NewTrackLocalStaticRTP(capacidad, fmt.Sprintf("%s-%d", tipo, numero), "kuboxmeet")
+	local, err := webrtc.NewTrackLocalStaticRTP(capacidad, fmt.Sprintf("%s-%d", tipo, numero), "agora")
 	if err != nil {
 		return nil, err
 	}

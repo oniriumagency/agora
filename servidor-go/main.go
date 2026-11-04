@@ -1,6 +1,6 @@
 package main
 
-// Kubox Meet · servidor. Un único ejecutable que cualquiera puede abrir para alojar reuniones:
+// Ágora · servidor. Un único ejecutable que cualquiera puede abrir para alojar reuniones:
 // web incluida, señalización y SFU (reenvía el audio y el vídeo de cada persona a las demás).
 
 import (
@@ -48,7 +48,7 @@ func main() {
 		return
 	}
 	log.SetFlags(log.Ltime)
-	fmt.Printf("\n  %s%sKubox Meet%s · servidor de reuniones\n\n", negrita, azul, normal)
+	fmt.Printf("\n  %s%sÁgora%s · servidor de reuniones\n\n", negrita, azul, normal)
 
 	if runtime.GOOS == "windows" && !config.sinFirewall {
 		fmt.Println("  … Comprobando el Firewall de Windows (puede pedir permiso de administrador)")
@@ -72,7 +72,7 @@ func main() {
 	} else if red.accesible {
 		linea(1, "TURN", "sin configurar (opcional: los puertos están abiertos)")
 	} else {
-		linea(1, "TURN", "sin configurar: desde fuera de tu red local el vídeo probablemente no conecte. Añade MEET_TURN_CLOUDFLARE_ID y MEET_TURN_CLOUDFLARE_TOKEN en kubox-meet.env junto al .exe")
+		linea(1, "TURN", "sin configurar: desde fuera de tu red local el vídeo probablemente no conecte. Añade MEET_TURN_CLOUDFLARE_ID y MEET_TURN_CLOUDFLARE_TOKEN en agora.env junto al .exe")
 	}
 
 	manejador := servidor.rutas(manejadorWeb())

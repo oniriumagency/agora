@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import { IconoTeclado, IconoVideoNuevo } from "@/componentes/comunes/Iconos";
-import { Logo } from "@/componentes/comunes/Logo";
+import { Greca, Logo } from "@/componentes/comunes/Logo";
 import { Ilustracion } from "./Ilustracion";
 import { generarCodigoSala, interpretarCodigo } from "@/utilidades/codigoSala";
 
@@ -32,16 +32,18 @@ export function Inicio() {
         <Logo />
         <span className="hidden text-lg text-gray-600 sm:block first-letter:uppercase">{hora}</span>
       </header>
+      <Greca className="text-oro/70" />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center gap-12 px-6 py-10 lg:flex-row lg:gap-16">
         <section className="max-w-xl flex-1 text-center lg:text-left">
-          <h1 className="text-4xl font-normal leading-tight text-gray-900 sm:text-[44px]">Reuniones por vídeo, directas y privadas</h1>
+          <p className="font-marca text-sm font-semibold uppercase tracking-[0.3em] text-oro-hondo">La plaza de tu equipo</p>
+          <h1 className="mt-3 text-4xl font-normal leading-tight text-gray-900 sm:text-[44px]">Reúnete, conversa y decide, como en el ágora</h1>
           <p className="mt-4 text-lg text-gray-600">
-            Tu propio servidor de reuniones: el audio y el vídeo pasan solo por el equipo que lo aloja, no por terceros. Comparte el enlace y empieza.
+            Videollamadas en tu propio servidor: el audio, el vídeo y los archivos pasan solo por el equipo que lo aloja, no por terceros. Comparte el enlace y empieza.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:items-start">
             <button
               onClick={() => window.location.assign(`/${generarCodigoSala()}`)}
-              className="flex h-12 items-center gap-2 rounded-md bg-acento-fuerte px-4 font-medium text-white shadow-sm transition hover:bg-[#1765cc] hover:shadow-md"
+              className="flex h-12 items-center gap-2 rounded-md bg-acento-fuerte px-4 font-medium text-white shadow-sm transition hover:bg-acento-hondo hover:shadow-md"
             >
               <IconoVideoNuevo tam={20} /> Nueva reunión
             </button>
@@ -59,14 +61,14 @@ export function Inicio() {
                   className="w-44 bg-transparent text-base outline-none placeholder:text-gray-500"
                 />
               </label>
-              <button disabled={!entrada.trim()} className="h-12 rounded-md px-3 font-medium text-acento-fuerte transition hover:bg-blue-50 disabled:text-gray-400 disabled:hover:bg-transparent">
+              <button disabled={!entrada.trim()} className="h-12 rounded-md px-3 font-medium text-acento-fuerte transition hover:bg-acento-suave/50 disabled:text-gray-400 disabled:hover:bg-transparent">
                 Unirse
               </button>
             </form>
           </div>
           {error && <p className="mt-3 text-sm text-peligro-fuerte">{error}</p>}
           <hr className="mt-10 border-gray-200" />
-          <p className="mt-4 text-sm text-gray-500">Cámara, micrófono, chat, mano alzada, reacciones y pantalla compartida.</p>
+          <p className="mt-4 text-sm text-gray-500">Cámara, micrófono, chat con archivos, mano alzada, reacciones y pantalla compartida.</p>
         </section>
         <Ilustracion />
       </main>
