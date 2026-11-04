@@ -79,6 +79,14 @@ export function Tesela({ datos, tamAvatar = 88 }: { datos: DatosTesela; tamAvata
         </div>
       )}
 
+      {datos.ausente && !datos.pantalla && (
+        <div className="absolute inset-0 flex items-end justify-center bg-sala-fondo/55 pb-10">
+          <span className="flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-oro" />
+            Reconectando…
+          </span>
+        </div>
+      )}
       {datos.mano !== null && !datos.pantalla && (
         <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-900 shadow" title="Mano levantada">
           <IconoMano tam={16} />

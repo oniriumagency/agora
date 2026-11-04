@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { prepararPrevia } from "@/estado/controlesLocales";
 import { entrar } from "@/estado/sesion";
+import { prepararSonidos } from "@/medios/sonidos";
 import { useReunion } from "@/estado/useReunion";
 import { LARGO_MAXIMO_NOMBRE } from "@/red/protocolo";
 import { Logo } from "../comunes/Logo";
@@ -42,6 +43,7 @@ export function SalaEspera({ codigo }: { codigo: string }) {
     } catch {
       /* sin almacenamiento: solo se pierde la comodidad de recordar */
     }
+    prepararSonidos(); // el toque de "Unirse" habilita el audio de los avisos
     void entrar(codigo, limpio);
   }
 

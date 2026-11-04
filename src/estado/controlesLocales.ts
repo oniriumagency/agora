@@ -60,6 +60,28 @@ export async function fijarCamara(encendida: boolean): Promise<void> {
   enviarAlServidor({ tipo: "ESTADO", cambios: { camara: encendida } });
 }
 
+/**
+ * Al volver del segundo plano: iOS (y algunos Android) terminan las pistas de cámara y micrófono.
+ * Si estaban encendidas y murieron, se vuelven a abrir y se envían por la misma conexión.
+ */
+export async function recuperarPistas(): Promise<void> {
+  const local = estado().local;
+  if (pistas.audio?.readyState === "ended") {
+    pistas.audio = null;
+    try {
+      const nueva = await abrirMicrofono(dispositivos.microfonoId);
+      nueva.enabled = local.microfono;
+      fijarPista("audio", nueva);
+    } catch (error) {
+      avisarError(error, "micrófono");
+    }
+  }
+  if (pistas.camara?.readyState === "ended" && local.camara) {
+    pistas.camara = null;
+    await fijarCamara(true);
+  }
+}
+
 export const alternarMicrofono = () => fijarMicrofono(!estado().local.microfono);
 export const alternarCamara = () => fijarCamara(!estado().local.camara);
 

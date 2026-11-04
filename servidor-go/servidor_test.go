@@ -139,3 +139,62 @@ func TestSalaChatYEstado(t *testing.T) {
 	ana.conn.Close()
 	beto.esperar("SALIO")
 }
+
+func TestReconexionGuardaElSitio(t *testing.T) {
+	api, cerrar, err := crearAPI(18092, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cerrar()
+	s := nuevoServidor(Config{carpetaDatos: t.TempDir(), maximoPorSala: 5, maximoVideos: 9, maximoSalas: 5, maximoConexiones: 10, graciaReconexion: 400 * time.Millisecond}, api)
+	s.fijarIce(nil)
+	prueba := httptest.NewServer(s.rutas(manejadorWeb()))
+	defer prueba.Close()
+	url := "ws" + strings.TrimPrefix(prueba.URL, "http") + "/senal"
+	conectar := func(nombre, reanudar string) *clientePrueba {
+		conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := &clientePrueba{conn, t}
+		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-vuelta", "nombre": nombre, "reanudar": reanudar, "estado": M{"microfono": true, "camara": false}})
+		return c
+	}
+	ana := conectar("Ana", "")
+	bienvenida := ana.esperar("BIENVENIDA")
+	idAna, clave := bienvenida["miId"].(string), bienvenida["clave"].(string)
+	beto := conectar("Beto", "")
+	beto.esperar("BIENVENIDA")
+	ana.esperar("ENTRO")
+
+	// Corte brusco (como al bloquear el celular): Ana queda ausente, no sale
+	ana.conn.UnderlyingConn().Close()
+	if estado := beto.esperar("ESTADO")["estado"].(map[string]any); estado["ausente"] != true {
+		t.Fatalf("esperaba ausente, llegó %v", estado)
+	}
+	vuelta := conectar("Ana", clave)
+	otra := vuelta.esperar("BIENVENIDA")
+	if otra["miId"] != idAna || otra["reanudada"] != true {
+		t.Fatalf("no retomó su sitio: %v", otra)
+	}
+	if estado := beto.esperar("ESTADO")["estado"].(map[string]any); estado["ausente"] == true {
+		t.Fatal("sigue ausente tras volver")
+	}
+	time.Sleep(600 * time.Millisecond) // pasa la gracia de la conexión vieja: no debe sacarla
+	vuelta.enviar(M{"tipo": "CHAT", "texto": "sigo aquí"})
+	if m := beto.esperar("CHAT")["mensaje"].(map[string]any); m["autorId"] != idAna {
+		t.Fatalf("chat de otra persona: %v", m)
+	}
+
+	// Colgar de verdad: sale al momento
+	vuelta.enviar(M{"tipo": "SALIR"})
+	if id := beto.esperar("SALIO")["id"]; id != idAna {
+		t.Fatalf("salió %v", id)
+	}
+	// Corte brusco sin volver: sale al acabar la gracia
+	carla := conectar("Carla", "")
+	carla.esperar("BIENVENIDA")
+	beto.esperar("ENTRO")
+	carla.conn.UnderlyingConn().Close()
+	beto.esperar("SALIO")
+}

@@ -21,9 +21,11 @@ var ordenPublicacion = []string{"audio", "camara", "pantalla"}
 
 type Participante struct {
 	id    string
-	clave string // secreto para subir archivos; solo lo conoce su navegador
-	sala  *Sala
-	datos DatosParticipante // protegido por sala.mu
+	clave string // secreto para subir archivos y retomar el sitio; solo lo conoce su navegador
+	// ausente: su conexión se cortó sin colgar y se le guarda el sitio (protegido por sala.mu)
+	ausente bool
+	sala    *Sala
+	datos   DatosParticipante // protegido por sala.mu
 
 	conn  *websocket.Conn
 	escMu sync.Mutex

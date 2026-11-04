@@ -54,7 +54,8 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 	detener := make(chan struct{})
 	defer close(detener)
 	go latido(p, detener)
-	defer s.salir(p)
+	adrede := false // colgó, cerró la pestaña o lo expulsó la política: sale sin periodo de gracia
+	defer func() { s.desconectar(p, adrede) }()
 
 	clientes, _ := s.ice()
 	p.enviar(M{"tipo": "SERVIDORES_ICE", "servidores": clientes})
@@ -63,6 +64,7 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, datos, err := conn.ReadMessage()
 		if err != nil {
+			adrede = adrede || websocket.IsCloseError(err, websocket.CloseNormalClosure) // 1001 (página oculta o cerrada) no basta: al cerrar la pestaña llega SALIR
 			return
 		}
 		if time.Since(inicioVentana) > ventanaTasa {
@@ -70,12 +72,17 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 		}
 		if cuenta++; cuenta > maximoPorVentana {
 			log.Printf("[Política] Conexión cerrada por exceso de mensajes.")
+			adrede = true
 			return
 		}
 		var mensaje MensajeEntrante
 		if json.Unmarshal(datos, &mensaje) != nil {
 			p.enviar(M{"tipo": "ERROR", "codigo": "MENSAJE_INVALIDO", "mensaje": "El mensaje no es JSON válido."})
 			continue
+		}
+		if mensaje.Tipo == "SALIR" {
+			adrede = true
+			return
 		}
 		s.despachar(p, &mensaje)
 	}
@@ -103,6 +110,10 @@ func errorA(p *Participante, codigo, texto string) {
 func (s *Servidor) despachar(p *Participante, m *MensajeEntrante) {
 	if m.Tipo == "UNIRSE" {
 		s.unirse(p, m)
+		return
+	}
+	if m.Tipo == "PING" { // el navegador comprueba si la conexión sigue viva al volver al primer plano
+		p.enviar(M{"tipo": "PONG"})
 		return
 	}
 	sala := p.sala
@@ -154,6 +165,9 @@ func (s *Servidor) unirse(p *Participante, m *MensajeEntrante) {
 	nombre := limpiarTexto(m.Nombre, largoMaximoNombre, false)
 	if !salaValida(m.Sala) || nombre == "" || m.Estado == nil {
 		errorA(p, "MENSAJE_INVALIDO", "Código de reunión o nombre no válidos.")
+		return
+	}
+	if m.Reanudar != "" && s.reanudar(p, m, nombre) {
 		return
 	}
 	p.datos = DatosParticipante{ID: p.id, Nombre: nombre, EntradaEn: ahoraMs(), Estado: EstadoParticipante{Microfono: m.Estado.Microfono, Camara: m.Estado.Camara}}

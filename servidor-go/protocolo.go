@@ -9,6 +9,8 @@ type EstadoParticipante struct {
 	Camara    bool   `json:"camara"`
 	Pantalla  bool   `json:"pantalla"`
 	Mano      *int64 `json:"mano"`
+	// Ausente: se cortó su conexión sin colgar (p. ej. bloqueó el celular); se le guarda el sitio.
+	Ausente bool `json:"ausente,omitempty"`
 }
 
 type DatosParticipante struct {
@@ -57,12 +59,15 @@ type MensajeEntrante struct {
 	Estado *struct {
 		Microfono bool `json:"microfono"`
 		Camara    bool `json:"camara"`
+		Pantalla  bool `json:"pantalla"`
 	} `json:"estado"`
-	Carga   *CargaSenal     `json:"carga"`
-	Cambios json.RawMessage `json:"cambios"`
-	Texto   string          `json:"texto"`
-	Emoji   string          `json:"emoji"`
-	Videos  []string        `json:"videos"`
+	// Reanudar: clave de una conexión anterior de esta misma persona para retomar su sitio.
+	Reanudar string          `json:"reanudar"`
+	Carga    *CargaSenal     `json:"carga"`
+	Cambios  json.RawMessage `json:"cambios"`
+	Texto    string          `json:"texto"`
+	Emoji    string          `json:"emoji"`
+	Videos   []string        `json:"videos"`
 }
 
 type CambiosEstado struct {

@@ -3,14 +3,21 @@ import { ConexionSfu, type FlujosPorPersona } from "@/red/ConexionSfu";
 import type { MensajeServidor, ServidorIce } from "@/red/protocolo";
 import { componerServidoresIce } from "@/red/servidoresIce";
 import { useReunion, LOCAL_INICIAL } from "./useReunion";
-import { pistasLocales, soltarMedios } from "./controlesLocales";
+import { pistasLocales, recuperarPistas, soltarMedios } from "./controlesLocales";
+import { sonarEntrada, sonarSalida } from "@/medios/sonidos";
+import { mantenerPantallaEncendida, soltarPantallaEncendida } from "@/medios/pantallaEncendida";
 
 /**
  * Ciclo de vida de una reunión: conectar al servidor, unirse, abrir la conexión WebRTC con el SFU
- * y traducir los mensajes del servidor al estado de la interfaz. Si se cae la señalización o los
- * medios, se vuelve a entrar (los demás verán que salimos y volvimos).
+ * y traducir los mensajes del servidor al estado de la interfaz.
+ *
+ * En el celular la conexión se corta a menudo sin querer: al bloquear la pantalla, cambiar de app o
+ * de red. Entonces se reconecta con la clave de la conexión anterior y el servidor nos devuelve el
+ * mismo sitio (los demás solo ven «Reconectando…» un momento). Mientras la página está oculta no se
+ * gastan reintentos: se reconecta en cuanto vuelve a verse.
  */
-const REINTENTOS_MAXIMOS = 8;
+const RENDIRSE_TRAS_MS = 3 * 60_000;
+const ESPERA_PONG_MS = 3500;
 const ESPERA_SERVIDORES_ICE_MS = 2500;
 
 let cliente: ClienteSenal | null = null;
@@ -20,6 +27,9 @@ let ultimaSuscripcion = "";
 let servidoresIce: ServidorIce[] | null = null;
 let alLlegarIce: (() => void) | null = null;
 let reintentos = 0;
+let caidaDesde: number | null = null;
+let temporizadorReintento: ReturnType<typeof setTimeout> | null = null;
+let alPong: (() => void) | null = null;
 
 const estado = () => useReunion.getState();
 
@@ -67,8 +77,13 @@ function alRecibir(mensaje: MensajeServidor): void {
       servidoresIce = mensaje.servidores;
       alLlegarIce?.();
       return;
+    case "PONG":
+      alPong?.();
+      return;
     case "BIENVENIDA":
       reintentos = 0;
+      caidaDesde = null;
+      void mantenerPantallaEncendida();
       medios?.cerrar();
       s.fijar({ avisoMedios: null });
       ultimosFlujos = {};
@@ -83,9 +98,13 @@ function alRecibir(mensaje: MensajeServidor): void {
       s.ponerFlujos(ultimosFlujos);
       ajustarCalidad();
       s.avisar(`${mensaje.participante.nombre} se unió`, "👋");
+      sonarEntrada();
       return;
     case "SALIO":
-      if (s.participantes[mensaje.id]) s.avisar(`${nombreDe(mensaje.id)} salió de la reunión`);
+      if (s.participantes[mensaje.id]) {
+        s.avisar(`${nombreDe(mensaje.id)} salió de la reunión`);
+        sonarSalida();
+      }
       s.quitarParticipante(mensaje.id);
       ajustarCalidad();
       return;
@@ -136,25 +155,90 @@ function alCerrar(inesperado: boolean): void {
   if (!inesperado || (s.fase !== "reunion" && s.fase !== "reconectando")) return;
   medios?.cerrar();
   medios = null;
-  s.fijar({ fase: "reconectando", participantes: {} });
-  if (++reintentos > REINTENTOS_MAXIMOS) {
-    s.fijar({ fase: "error", error: "Se perdió la conexión con el servidor de la reunión." });
+  // Se conservan las personas en pantalla: al volver, el servidor confirma quién sigue
+  s.fijar({ fase: "reconectando" });
+  caidaDesde ??= Date.now();
+  programarReintento();
+}
+
+function programarReintento(): void {
+  if (temporizadorReintento) clearTimeout(temporizadorReintento);
+  temporizadorReintento = null;
+  if (document.hidden) return; // se reintenta al volver a la página (ver alVolver)
+  if (caidaDesde !== null && Date.now() - caidaDesde > RENDIRSE_TRAS_MS) {
+    estado().fijar({ fase: "error", error: "Se perdió la conexión con el servidor de la reunión." });
     return;
   }
-  setTimeout(() => void conectarYUnirse().catch(() => undefined), Math.min(1000 * reintentos, 5000));
+  const espera = Math.min(800 * ++reintentos, 5000);
+  temporizadorReintento = setTimeout(() => {
+    temporizadorReintento = null;
+    void conectarYUnirse().catch(() => programarReintento());
+  }, espera);
 }
 
 async function conectarYUnirse(): Promise<void> {
   servidoresIce = null;
+  const { clave: claveAnterior, fase } = estado();
   cliente = new ClienteSenal(alRecibir, alCerrar);
   await cliente.conectar();
   await esperarServidoresIce();
   const { sala, miNombre, local } = estado();
-  cliente.enviar({ tipo: "UNIRSE", sala, nombre: miNombre, estado: { microfono: local.microfono, camara: local.camara } });
+  cliente.enviar({
+    tipo: "UNIRSE",
+    sala,
+    nombre: miNombre,
+    estado: { microfono: local.microfono, camara: local.camara, pantalla: local.pantalla },
+    reanudar: fase === "reconectando" && claveAnterior ? claveAnterior : undefined,
+  });
+}
+
+/** ¿Sigue viva la conexión? Al volver del segundo plano un WebSocket puede parecer abierto y estar muerto. */
+function comprobarConexion(): Promise<boolean> {
+  if (!cliente?.abierta()) return Promise.resolve(false);
+  return new Promise((resolver) => {
+    const tiempo = setTimeout(() => {
+      alPong = null;
+      resolver(false);
+    }, ESPERA_PONG_MS);
+    alPong = () => {
+      clearTimeout(tiempo);
+      alPong = null;
+      resolver(true);
+    };
+    cliente?.enviar({ tipo: "PING" });
+  });
+}
+
+/** La página vuelve a verse (se desbloqueó el celular, se volvió a la app) o volvió la red. */
+async function alVolver(): Promise<void> {
+  const s = estado();
+  if (document.hidden || (s.fase !== "reunion" && s.fase !== "reconectando")) return;
+  await recuperarPistas(); // iOS apaga cámara y micrófono en segundo plano
+  void mantenerPantallaEncendida();
+  if (s.fase === "reconectando") {
+    reintentos = 0;
+    caidaDesde = Date.now();
+    if (temporizadorReintento) clearTimeout(temporizadorReintento);
+    temporizadorReintento = null;
+    void conectarYUnirse().catch(() => programarReintento());
+    return;
+  }
+  if (!(await comprobarConexion())) cliente?.reiniciar();
+}
+
+if (typeof window !== "undefined") {
+  document.addEventListener("visibilitychange", () => void alVolver());
+  window.addEventListener("online", () => void alVolver());
+  window.addEventListener("pageshow", (evento) => evento.persisted && void alVolver());
+  // Cerrar la pestaña o irse a otra página es colgar: que el servidor no guarde el sitio
+  window.addEventListener("pagehide", (evento) => {
+    if (!evento.persisted) cliente?.enviar({ tipo: "SALIR" });
+  });
 }
 
 export async function entrar(sala: string, nombre: string): Promise<void> {
   reintentos = 0;
+  caidaDesde = null;
   estado().fijar({ fase: "conectando", sala, miNombre: nombre, error: null, chat: [], noLeidos: 0, entradaEn: null });
   try {
     await conectarYUnirse();
@@ -164,12 +248,15 @@ export async function entrar(sala: string, nombre: string): Promise<void> {
 }
 
 function cerrarTodo(): void {
+  if (temporizadorReintento) clearTimeout(temporizadorReintento);
+  temporizadorReintento = null;
+  void soltarPantallaEncendida();
   cliente?.cerrar();
   cliente = null;
   medios?.cerrar();
   medios = null;
   soltarMedios();
-  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null });
+  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null, clave: null });
 }
 
 /** Reintenta el audio y el vídeo volviendo a entrar en la reunión. */

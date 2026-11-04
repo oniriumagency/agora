@@ -35,6 +35,10 @@ export class ClienteSenal {
     });
   }
 
+  abierta(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+
   enviar(mensaje: MensajeCliente): void {
     if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(mensaje));
   }
@@ -44,7 +48,9 @@ export class ClienteSenal {
     this.socket?.close(4000);
   }
 
+  /** Colgar: avisa al servidor (para que no guarde el sitio) y cierra. */
   cerrar(): void {
+    this.enviar({ tipo: "SALIR" });
     this.cerradoAProposito = true;
     this.socket?.close(1000);
     this.socket = null;

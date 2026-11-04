@@ -15,6 +15,19 @@ function comprobar(condicion, mensaje) {
 async function entrar(navegador, nombre) {
   const contexto = await navegador.newContext({ permissions: ["camera", "microphone"], viewport: { width: 1280, height: 760 } });
   const pagina = await contexto.newPage();
+  // Guarda los WebSocket para poder simular un corte (como al bloquear el celular)
+  await pagina.addInitScript(() => {
+    const Original = window.WebSocket;
+    window.__sockets = [];
+    window.WebSocket = class extends Original {
+      constructor(...args) {
+        super(...args);
+        window.__sockets.push(this);
+      }
+    };
+  });
+  pagina.__salidas = 0;
+  pagina.on("websocket", (ws) => ws.on("framereceived", (f) => String(f.payload).includes('"SALIO"') && pagina.__salidas++));
   if (process.env.DEPURAR) pagina.on("websocket", (ws) => { ws.on("framereceived", (f) => console.log(`[${nombre}] <-`, String(f.payload).slice(0, 90))); ws.on("framesent", (f) => console.log(`[${nombre}] ->`, String(f.payload).slice(0, 90))); });
   pagina.on("console", (m) => m.type() === "error" && console.error(`[${nombre}] consola:`, m.text().slice(0, 400)));
   pagina.on("pageerror", (error) => console.error(`[${nombre}] error de página:`, error.message));
@@ -95,6 +108,12 @@ async function videoVivo(pagina, textoEtiqueta) {
       await ana.screenshot({ path: `${CAPTURAS}/ana-presentando.png` });
     }
     await ana.getByLabel("Dejar de presentar").first().click();
+    // Corte de conexión de Ana: debe volver sola a su sitio sin que Beto la vea salir
+    await ana.evaluate(() => window.__sockets.at(-1).close(4000));
+    await ana.waitForFunction(() => window.__sockets.length >= 2 && window.__sockets.at(-1).readyState === 1);
+    comprobar(await videoVivo(beto, "Ana"), "Tras cortarse la conexión, Ana vuelve y Beto la ve de nuevo");
+    comprobar(beto.__salidas === 0 && (await beto.locator("[data-tesela]", { hasText: "Ana" }).count()) >= 1, "Beto no vio salir a Ana durante el corte");
+
     await ana.getByLabel("Salir de la llamada").click();
     await beto.getByText("Ana salió de la reunión").waitFor();
     comprobar(true, "Beto ve que Ana salió");

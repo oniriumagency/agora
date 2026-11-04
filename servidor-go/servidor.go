@@ -100,11 +100,15 @@ func (s *Servidor) salir(p *Participante) {
 	}
 	p.cerrar()
 	s.mu.Lock()
-	delete(s.claves, p.clave)
+	if s.claves[p.clave] == p {
+		delete(s.claves, p.clave)
+	}
 	s.mu.Unlock()
 	sala.mu.Lock()
-	_, estaba := sala.miembros[p.id]
-	delete(sala.miembros, p.id)
+	estaba := sala.miembros[p.id] == p
+	if estaba {
+		delete(sala.miembros, p.id)
+	}
 	quedan := len(sala.miembros)
 	sala.mu.Unlock()
 	if !estaba {

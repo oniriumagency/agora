@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config: opciones de línea de órdenes, con valores por defecto pensados para hacer doble clic en
@@ -20,6 +21,7 @@ type Config struct {
 	maximoSalas      int
 	maximoConexiones int
 	maximoArchivoMB  int
+	graciaReconexion time.Duration
 	urlPublica       string
 	sinTunel         bool
 	sinUPnP          bool
@@ -42,6 +44,7 @@ func leerConfig() Config {
 	flag.IntVar(&c.maximoSalas, "maximo-salas", entero("MEET_MAXIMO_SALAS", 50), "reuniones simultáneas")
 	flag.IntVar(&c.maximoConexiones, "maximo-conexiones", entero("MEET_MAXIMO_CONEXIONES", 500), "conexiones simultáneas")
 	flag.IntVar(&c.maximoArchivoMB, "maximo-archivo-mb", entero("MEET_MAXIMO_ARCHIVO_MB", 95), "tamaño máximo de cada archivo del chat (el túnel de Cloudflare admite hasta 100 MB)")
+	flag.DurationVar(&c.graciaReconexion, "gracia-reconexion", 3*time.Minute, "cuánto se guarda el sitio de quien pierde la conexión sin colgar (celular bloqueado, cambio de red)")
 	flag.StringVar(&c.urlPublica, "url-publica", os.Getenv("MEET_URL_PUBLICA"), "URL pública propia (p. ej. https://meet.midominio.com); evita el túnel rápido")
 	flag.BoolVar(&c.sinTunel, "sin-tunel", os.Getenv("MEET_SIN_TUNEL") == "true", "no abrir el túnel de Cloudflare")
 	flag.BoolVar(&c.sinUPnP, "sin-upnp", os.Getenv("MEET_SIN_UPNP") == "true", "no intentar abrir puertos en el router")

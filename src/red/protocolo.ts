@@ -18,6 +18,8 @@ export interface EstadoParticipante {
   camara: boolean;
   pantalla: boolean;
   mano: number | null;
+  /** Perdió la conexión sin colgar (p. ej. bloqueó el celular); el servidor le guarda el sitio. */
+  ausente?: boolean;
 }
 
 export interface Participante {
@@ -73,7 +75,9 @@ export interface CambiosEstado {
 }
 
 export type MensajeCliente =
-  | { tipo: "UNIRSE"; sala: string; nombre: string; estado: { microfono: boolean; camara: boolean } }
+  | { tipo: "UNIRSE"; sala: string; nombre: string; estado: { microfono: boolean; camara: boolean; pantalla: boolean }; reanudar?: string }
+  | { tipo: "SALIR" }
+  | { tipo: "PING" }
   | { tipo: "SENAL"; carga: CargaSenal }
   | { tipo: "ESTADO"; cambios: CambiosEstado }
   | { tipo: "CHAT"; texto: string }
@@ -82,7 +86,8 @@ export type MensajeCliente =
 
 export type MensajeServidor =
   | { tipo: "SERVIDORES_ICE"; servidores: ServidorIce[] }
-  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number }
+  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number; reanudada?: boolean }
+  | { tipo: "PONG" }
   | { tipo: "ENTRO"; participante: Participante }
   | { tipo: "SALIO"; id: string }
   | { tipo: "ESTADO"; id: string; estado: EstadoParticipante }
