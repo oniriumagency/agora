@@ -153,12 +153,6 @@ func (s *Servidor) salir(p *Participante) {
 	}
 }
 
-func (s *Servidor) cantidadSalas() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.salas)
-}
-
 func (s *Servidor) rutas(web http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/senal", s.atenderSenal)

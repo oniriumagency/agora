@@ -4,6 +4,15 @@ Reuniones por vídeo al estilo Google Meet con **servidor propio**: cualquiera a
 `AgoraServidor.exe` en su PC, el programa prepara la red y muestra el enlace que hay que
 compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compartida y reuniones grandes.
 
+## Funciones
+
+- Cámara, micrófono y pantalla compartida, con selector de dispositivos y vista previa antes de entrar.
+- Chat con enlaces y archivos (hasta 95 MB), mano alzada y reacciones flotantes.
+- Mosaico paginado para reuniones grandes, vista de una sola persona y pantalla completa.
+- Anfitrión: silenciar y expulsar.
+- Celular: modo bolsillo, sigue la llamada con la pantalla bloqueada y recupera el sitio tras un corte.
+- Instalable como app (PWA) y sin cuentas: basta con compartir el enlace de la sala.
+
 ## Cómo se usa
 
 1. Abre `AgoraServidor.exe` (doble clic). Al arrancar:
@@ -65,6 +74,44 @@ el audio de todos. Calcula aproximadamente 2 o 3 Mbps de subida por participante
 | 600 Mbps (fibra simétrica) | 100 o más |
 
 Con mucha gente, quien no se ve en la página actual no consume nada de vídeo.
+
+## Configuración
+
+Cada opción se puede pasar como argumento o como variable de entorno (también desde `agora.env`
+junto al ejecutable). Plantilla completa en [`despliegue/ubuntu/agora.env.example`](despliegue/ubuntu/agora.env.example).
+
+| Variable | Argumento | Por defecto | Para qué |
+|---|---|---|---|
+| `MEET_PUERTO_WEB` | `--puerto-web` | 8090 | Web y señalización (HTTP) |
+| `MEET_PUERTO_HTTPS` | `--puerto-https` | 8443 | HTTPS con certificado propio para la red local (0 lo apaga) |
+| `MEET_PUERTO_MEDIOS` | `--puerto-medios` | 8091 | Audio y vídeo (UDP y TCP) |
+| `MEET_MAXIMO_POR_SALA` | `--maximo-por-sala` | 100 | Personas por reunión |
+| `MEET_MAXIMO_VIDEOS` | `--maximo-videos` | 9 | Vídeos que recibe cada persona a la vez |
+| `MEET_MAXIMO_SALAS` | `--maximo-salas` | 50 | Reuniones simultáneas |
+| `MEET_MAXIMO_CONEXIONES` | `--maximo-conexiones` | 500 | Conexiones simultáneas |
+| `MEET_MAXIMO_ARCHIVO_MB` | `--maximo-archivo-mb` | 95 | Tamaño máximo de archivo en el chat |
+| `MEET_URL_PUBLICA` | `--url-publica` | (túnel rápido) | Dominio propio en lugar de trycloudflare |
+| `MEET_SIN_TUNEL`, `MEET_SIN_UPNP`, `MEET_SIN_NAVEGADOR` | `--sin-tunel`, `--sin-upnp`, `--sin-navegador` | false | Desactivan cada paso del arranque |
+| `MEET_TURN_CLOUDFLARE_ID`, `MEET_TURN_CLOUDFLARE_TOKEN` | (solo entorno) | vacío | Relé TURN de Cloudflare para atravesar CGNAT |
+
+`agora.env` contiene claves y está en `.gitignore`: no lo subas al repositorio.
+
+## Estructura
+
+```
+servidor-go/        Servidor Go: señalización, SFU (Pion), túnel, UPnP, firewall y web embebida
+  web/              Aquí se copia la web compilada (no se versiona)
+src/
+  app/              Next.js: layout, página única y fuentes
+  componentes/      Interfaz: inicio, sala de espera, reunión y pantalla final
+  estado/           Estado de la reunión (zustand) y controles locales
+  medios/           Cámara, micrófono, sonidos y detección de voz
+  red/              Cliente de señalización, conexión con el SFU y protocolo
+despliegue/ubuntu/  Servicio systemd e instalador para Linux
+scripts/            Desarrollo y construcción de los ejecutables
+pruebas/            Pruebas de extremo a extremo con Playwright
+marca/              Logotipo e iconos
+```
 
 ## Desarrollo
 

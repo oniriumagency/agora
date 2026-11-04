@@ -12,3 +12,16 @@ servidor-go/web/*
 !servidor-go/web/LEEME.txt
 agora.env
 kubox-meet.env
+
+# Binarios de Go compilados a mano
+servidor-go/*.exe
+servidor-go/servidor-go
+servidor-go/agora-servidor*
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+*.log

@@ -7,14 +7,14 @@ Cloudflare, igual que en Windows.
 
 ## 1. Llevar el paquete a la torre
 
-En Windows, `D:\Kubox Meet\dist\agora-ubuntu.tar.gz` lleva el servidor, el instalador y la
+En Windows, `dist\agora-ubuntu.tar.gz` (lo genera `npm run exe`) lleva el servidor, el instalador y la
 configuración. Cópialo a la torre (cambia `usuario@torre` por el tuyo):
 
 ```powershell
-scp "D:\Kubox Meet\dist\agora-ubuntu.tar.gz" usuario@torre:
+scp "dist\agora-ubuntu.tar.gz" usuario@torre:
 ```
 
-Opcional: para no volver a pegar las claves TURN, copia también tu `kubox-meet.env` y ponlo dentro
+Opcional: para no volver a pegar las claves TURN, copia también tu `agora.env` (o el antiguo `kubox-meet.env`) y ponlo dentro
 de la carpeta `agora` después de descomprimir.
 
 ## 2. Instalar (o actualizar)
