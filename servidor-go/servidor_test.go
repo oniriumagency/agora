@@ -12,15 +12,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const accesoPrueba = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 func TestValidacion(t *testing.T) {
-	if !salaValida("abc-defg-hij") || salaValida("../etc") || salaValida("ABC") {
+	if !salaValida("abc-defg-hij") || salaValida("../etc") || salaValida("ABC") || salaValida("abc-def") {
 		t.Fatal("validación de sala incorrecta")
 	}
-	if got := limpiarTexto("  Ana\u0007 ", 40, false); got != "Ana" {
-		t.Fatalf("limpiarTexto = %q", got)
-	}
-	if got := limpiarTexto(strings.Repeat("ñ", 50), 40, false); len([]rune(got)) != 40 {
-		t.Fatal("no recorta por caracteres")
+	if !accesoValido(accesoPrueba) || accesoValido("corta") || cifradoValido("hola mundo", 100) || !cifradoValido("e1.QUJD-_", 100) {
+		t.Fatal("validación de acceso o cifrado incorrecta")
 	}
 }
 
@@ -80,12 +79,12 @@ func TestSalaChatYEstado(t *testing.T) {
 			t.Fatal(err)
 		}
 		c := &clientePrueba{conn, t}
-		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-prueba", "nombre": nombre, "estado": M{"microfono": true, "camara": false}})
+		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-prueba", "nombre": nombre, "acceso": accesoPrueba, "estado": M{"microfono": true, "camara": false}})
 		return c
 	}
-	ana := conectar("Ana")
+	ana := conectar("e1.Ana")
 	claveAna := ana.esperar("BIENVENIDA")["clave"].(string)
-	beto := conectar("Beto")
+	beto := conectar("e1.Beto")
 	bienvenida := beto.esperar("BIENVENIDA")
 	if lista, _ := json.Marshal(bienvenida["participantes"]); !strings.Contains(string(lista), "Ana") {
 		t.Fatal("Beto no ve a Ana")
@@ -96,12 +95,16 @@ func TestSalaChatYEstado(t *testing.T) {
 		t.Fatal("la mano no llegó")
 	}
 	ana.enviar(M{"tipo": "CHAT", "texto": "  hola  "})
-	if texto := beto.esperar("CHAT")["mensaje"].(map[string]any)["texto"]; texto != "hola" {
+	if codigo := ana.esperar("ERROR")["codigo"]; codigo != "MENSAJE_INVALIDO" {
+		t.Fatalf("aceptó texto sin cifrar: %v", codigo)
+	}
+	ana.enviar(M{"tipo": "CHAT", "texto": "e1.hola"})
+	if texto := beto.esperar("CHAT")["mensaje"].(map[string]any)["texto"]; texto != "e1.hola" {
 		t.Fatalf("chat = %v", texto)
 	}
 	// Archivos: sin clave se rechaza; con clave llega al chat y se descarga como adjunto.
 	subir := func(clave string, cuerpo string) int {
-		pedido, _ := http.NewRequest("POST", prueba.URL+"/archivos?nombre=..%2Fnotas.txt", strings.NewReader(cuerpo))
+		pedido, _ := http.NewRequest("POST", prueba.URL+"/archivos?nombre=e1.notas", strings.NewReader(cuerpo))
 		pedido.Header.Set("X-Clave", clave)
 		r, err := http.DefaultClient.Do(pedido)
 		if err != nil {
@@ -120,7 +123,7 @@ func TestSalaChatYEstado(t *testing.T) {
 		t.Fatalf("subida = %d", codigo)
 	}
 	archivo := beto.esperar("CHAT")["mensaje"].(map[string]any)["archivo"].(map[string]any)
-	if archivo["nombre"] != "notas.txt" || archivo["tamano"].(float64) != 21 {
+	if archivo["nombre"] != "e1.notas" || archivo["tamano"].(float64) != 21 {
 		t.Fatalf("archivo = %v", archivo)
 	}
 	r, err := http.Get(prueba.URL + "/archivos/" + archivo["id"].(string) + "?ver=1")
@@ -132,9 +135,18 @@ func TestSalaChatYEstado(t *testing.T) {
 	if string(contenido) != "<script>hola</script>" || !strings.HasPrefix(r.Header.Get("Content-Disposition"), "attachment") || r.Header.Get("Content-Type") != "application/octet-stream" {
 		t.Fatalf("descarga insegura: %s %v", contenido, r.Header)
 	}
-	carla := conectar("Carla")
+	carla := conectar("e1.Carla")
 	if codigo := carla.esperar("ERROR")["codigo"]; codigo != "SALA_LLENA" {
 		t.Fatalf("esperaba SALA_LLENA, llegó %v", codigo)
+	}
+	intruso, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ci := &clientePrueba{intruso, t}
+	ci.enviar(M{"tipo": "UNIRSE", "sala": "sala-prueba", "nombre": "e1.Intruso", "acceso": strings.Repeat("B", 43), "estado": M{"microfono": true, "camara": false}})
+	if codigo := ci.esperar("ERROR")["codigo"]; codigo != "CLAVE_INCORRECTA" {
+		t.Fatalf("esperaba CLAVE_INCORRECTA, llegó %v", codigo)
 	}
 	ana.conn.Close()
 	beto.esperar("SALIO")
@@ -157,13 +169,13 @@ func TestReconexionGuardaElSitio(t *testing.T) {
 			t.Fatal(err)
 		}
 		c := &clientePrueba{conn, t}
-		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-vuelta", "nombre": nombre, "reanudar": reanudar, "estado": M{"microfono": true, "camara": false}})
+		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-vuelta", "nombre": nombre, "reanudar": reanudar, "acceso": accesoPrueba, "estado": M{"microfono": true, "camara": false}})
 		return c
 	}
-	ana := conectar("Ana", "")
+	ana := conectar("e1.Ana", "")
 	bienvenida := ana.esperar("BIENVENIDA")
 	idAna, clave := bienvenida["miId"].(string), bienvenida["clave"].(string)
-	beto := conectar("Beto", "")
+	beto := conectar("e1.Beto", "")
 	beto.esperar("BIENVENIDA")
 	ana.esperar("ENTRO")
 
@@ -172,7 +184,7 @@ func TestReconexionGuardaElSitio(t *testing.T) {
 	if estado := beto.esperar("ESTADO")["estado"].(map[string]any); estado["ausente"] != true {
 		t.Fatalf("esperaba ausente, llegó %v", estado)
 	}
-	vuelta := conectar("Ana", clave)
+	vuelta := conectar("e1.Ana", clave)
 	otra := vuelta.esperar("BIENVENIDA")
 	if otra["miId"] != idAna || otra["reanudada"] != true {
 		t.Fatalf("no retomó su sitio: %v", otra)
@@ -181,7 +193,7 @@ func TestReconexionGuardaElSitio(t *testing.T) {
 		t.Fatal("sigue ausente tras volver")
 	}
 	time.Sleep(600 * time.Millisecond) // pasa la gracia de la conexión vieja: no debe sacarla
-	vuelta.enviar(M{"tipo": "CHAT", "texto": "sigo aquí"})
+	vuelta.enviar(M{"tipo": "CHAT", "texto": "e1.sigoaqui"})
 	if m := beto.esperar("CHAT")["mensaje"].(map[string]any); m["autorId"] != idAna {
 		t.Fatalf("chat de otra persona: %v", m)
 	}
@@ -192,7 +204,7 @@ func TestReconexionGuardaElSitio(t *testing.T) {
 		t.Fatalf("salió %v", id)
 	}
 	// Corte brusco sin volver: sale al acabar la gracia
-	carla := conectar("Carla", "")
+	carla := conectar("e1.Carla", "")
 	carla.esperar("BIENVENIDA")
 	beto.esperar("ENTRO")
 	carla.conn.UnderlyingConn().Close()
@@ -216,12 +228,12 @@ func TestAnfitrionSilenciaYExpulsa(t *testing.T) {
 			t.Fatal(err)
 		}
 		c := &clientePrueba{conn, t}
-		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-mod", "nombre": nombre, "dispositivo": dispositivo, "estado": M{"microfono": true, "camara": false}})
+		c.enviar(M{"tipo": "UNIRSE", "sala": "sala-moderar", "nombre": nombre, "dispositivo": dispositivo, "acceso": accesoPrueba, "estado": M{"microfono": true, "camara": false}})
 		return c
 	}
-	ana := conectar("Ana", "disp-ana")
+	ana := conectar("e1.Ana", "disp-ana")
 	idAna := ana.esperar("BIENVENIDA")["miId"]
-	beto := conectar("Beto", "disp-beto")
+	beto := conectar("e1.Beto", "disp-beto")
 	b := beto.esperar("BIENVENIDA")
 	idBeto := b["miId"]
 	if b["anfitrion"] != idAna {
@@ -240,12 +252,12 @@ func TestAnfitrionSilenciaYExpulsa(t *testing.T) {
 	ana.enviar(M{"tipo": "MODERAR", "accion": "expulsar", "id": idBeto})
 	beto.esperar("EXPULSADO")
 	ana.esperar("SALIO")
-	otra := conectar("Beto", "disp-beto")
+	otra := conectar("e1.Beto", "disp-beto")
 	if codigo := otra.esperar("ERROR")["codigo"]; codigo != "EXPULSADO" {
 		t.Fatalf("el expulsado volvió a entrar: %v", codigo)
 	}
 	// Si la anfitriona se va, pasa al siguiente
-	carla := conectar("Carla", "disp-carla")
+	carla := conectar("e1.Carla", "disp-carla")
 	carla.esperar("BIENVENIDA")
 	ana.enviar(M{"tipo": "SALIR"})
 	if id := carla.esperar("ANFITRION")["id"]; id == idAna || id == nil {

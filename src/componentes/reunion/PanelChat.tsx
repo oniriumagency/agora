@@ -2,9 +2,10 @@
 import { Fragment, useEffect, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
 import { enviarChat } from "@/estado/controlesLocales";
 import { useReunion } from "@/estado/useReunion";
-import { LARGO_MAXIMO_CHAT, type ArchivoChat } from "@/red/protocolo";
-import { formatearBytes, subirArchivo, urlArchivo } from "@/red/archivos";
-import { IconoArchivo, IconoCerrar, IconoClip, IconoDescargar, IconoEnviar } from "../comunes/Iconos";
+import { LARGO_MAXIMO_CHAT } from "@/red/protocolo";
+import { subirArchivo } from "@/red/archivos";
+import { TarjetaArchivo } from "./TarjetaArchivo";
+import { IconoCerrar, IconoClip, IconoEnviar } from "../comunes/Iconos";
 import { TextoConEnlaces } from "./TextoConEnlaces";
 
 /** Chat de la reunión. Los mensajes consecutivos del mismo autor se agrupan bajo una cabecera. */
@@ -185,36 +186,6 @@ export function PanelChat() {
           <IconoEnviar tam={20} />
         </button>
       </form>
-    </div>
-  );
-}
-
-function TarjetaArchivo({ archivo }: { archivo: ArchivoChat }) {
-  const [sinVista, setSinVista] = useState(false);
-  return (
-    <div className="mt-1.5 overflow-hidden rounded-xl border border-gray-200">
-      {archivo.vistaPrevia && !sinVista && (
-        <a href={urlArchivo(archivo.id, true)} target="_blank" rel="noopener noreferrer" className="block bg-gray-50">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={urlArchivo(archivo.id, true)} alt={archivo.nombre} loading="lazy" onError={() => setSinVista(true)} className="max-h-56 w-full object-contain" />
-        </a>
-      )}
-      <div className="flex items-center gap-3 px-3 py-2">
-        <IconoArchivo tam={20} className="shrink-0 text-gray-500" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-gray-900" title={archivo.nombre}>{archivo.nombre}</p>
-          <p className="text-xs text-gray-500">{formatearBytes(archivo.tamano)}</p>
-        </div>
-        <a
-          href={urlArchivo(archivo.id)}
-          download={archivo.nombre}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-acento-fuerte hover:bg-gray-100"
-          aria-label={`Descargar ${archivo.nombre}`}
-          title="Descargar"
-        >
-          <IconoDescargar tam={20} />
-        </a>
-      </div>
     </div>
   );
 }

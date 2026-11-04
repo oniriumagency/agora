@@ -1,4 +1,6 @@
-import { urlArchivo } from "@/red/archivos";
+import { cifrarBytes, clavesActuales, deBase64Url } from "@/cifrado/claves";
+import { descifrarOgg } from "@/cifrado/ogg";
+import { obtenerArchivo } from "@/red/archivos";
 import { urlServidor } from "@/red/urlSenalizacion";
 
 /**
@@ -7,6 +9,7 @@ import { urlServidor } from "@/red/urlSenalizacion";
  *   estabas, se mezcla y se escucha acelerado (sin voz de ardilla) hasta alcanzar el directo.
  * - grabarSinConexion / enviarLoGrabado: si se corta la red, se graba tu micrófono; al volver se
  *   sube y los demás lo escuchan acelerado.
+ * Todo va cifrado de extremo a extremo: el servidor guarda y reparte audio que no puede escuchar.
  */
 const VELOCIDAD = 1.5;
 const TASA = 48000;
@@ -33,11 +36,10 @@ function reproducirAcelerado(url: string, senal: { cancelado: boolean }): Promis
   });
 }
 
-function aBytes(base64: string): ArrayBuffer {
-  const texto = atob(base64);
-  const bytes = new Uint8Array(texto.length);
-  for (let i = 0; i < texto.length; i++) bytes[i] = texto.charCodeAt(i);
-  return bytes.buffer;
+/** Pista Ogg del servidor (base64 estándar) con cada paquete Opus descifrado. */
+async function pistaDescifrada(base64: string): Promise<ArrayBuffer | null> {
+  const claves = clavesActuales();
+  return claves ? descifrarOgg(deBase64Url(base64), claves.medios) : null;
 }
 
 function aWav(buffer: AudioBuffer): Blob {
@@ -112,7 +114,8 @@ export function ponerseAlDia(desde: number, clave: string, alAvanzar: (pendiente
       const tramo = hasta - cursor;
       cursor = hasta;
       alAvanzar(tramo / 1000);
-      const buffers = (await Promise.all((pistas ?? []).map((p) => decodificar(aBytes(p.ogg))))).filter((b): b is AudioBuffer => b !== null);
+      const oggs = await Promise.all((pistas ?? []).map((p) => pistaDescifrada(p.ogg)));
+      const buffers = (await Promise.all(oggs.map((ogg) => (ogg ? decodificar(ogg) : null)))).filter((b): b is AudioBuffer => b !== null);
       if (buffers.length > 0) {
         const mezcla = await mezclar(buffers);
         if (hayVoz(mezcla)) {
@@ -167,14 +170,19 @@ export async function enviarLoGrabado(clave: string): Promise<void> {
   if (blob.size < 2000) return;
   const decodificado = await decodificar(await blob.arrayBuffer());
   if (decodificado && !hayVoz(decodificado)) return; // solo silencio: no molestar a nadie
-  await fetch(`${urlServidor()}/voz`, { method: "POST", headers: { "X-Clave": clave, "Content-Type": blob.type.split(";")[0] }, body: blob }).catch(() => undefined);
+  const cifrado = new Blob([await cifrarBytes(await blob.arrayBuffer())], { type: "application/octet-stream" });
+  await fetch(`${urlServidor()}/voz`, { method: "POST", headers: { "X-Clave": clave, "Content-Type": "application/octet-stream" }, body: cifrado }).catch(() => undefined);
 }
 
 /** Lo que otra persona dijo sin conexión: se escucha a 1,5×, en cola si llegan varias. */
 let cola: Promise<void> = Promise.resolve();
 export function escucharLoQueDijo(id: string, alEmpezar: () => void): void {
-  cola = cola.then(() => {
+  cola = cola.then(async () => {
+    const audio = await decodificar(await (await obtenerArchivo(id, "")).arrayBuffer());
+    if (!audio) return;
     alEmpezar();
-    return reproducirAcelerado(urlArchivo(id, true), { cancelado: false });
-  });
+    const url = URL.createObjectURL(aWav(audio));
+    await reproducirAcelerado(url, { cancelado: false });
+    URL.revokeObjectURL(url);
+  }).catch((error) => console.warn("[Reposición] Audio sin conexión", error));
 }

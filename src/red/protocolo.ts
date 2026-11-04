@@ -6,6 +6,8 @@
  * mensaje PISTAS dice qué persona y qué tipo lleva cada ranura (identificada por su mid).
  */
 export const PATRON_SALA = /^[a-z0-9]{3,12}(-[a-z0-9]{3,12}){0,3}$/;
+/** Letras mínimas de un código de reunión (sin contar guiones); el servidor exige lo mismo. */
+export const MINIMO_LETRAS_SALA = 10;
 export const LARGO_MAXIMO_NOMBRE = 40;
 export const LARGO_MAXIMO_CHAT = 1000;
 export const REACCIONES = ["👍", "❤️", "😂", "😮", "👏", "🎉"] as const;
@@ -75,7 +77,7 @@ export interface CambiosEstado {
 }
 
 export type MensajeCliente =
-  | { tipo: "UNIRSE"; sala: string; nombre: string; estado: { microfono: boolean; camara: boolean; pantalla: boolean }; reanudar?: string; dispositivo: string }
+  | { tipo: "UNIRSE"; sala: string; nombre: string; estado: { microfono: boolean; camara: boolean; pantalla: boolean }; reanudar?: string; dispositivo: string; acceso: string }
   | { tipo: "MODERAR"; accion: "silenciar" | "expulsar"; id: string }
   | { tipo: "SALIR" }
   | { tipo: "PING" }

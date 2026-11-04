@@ -1,14 +1,33 @@
+import { cifrarBytes, cifrarTexto, descifrarBytes } from "@/cifrado/claves";
 import { urlServidor } from "./urlSenalizacion";
 
-/** Sube un archivo al servidor de la reunión; el servidor lo reparte en el chat a todos. */
+/**
+ * Sube un archivo al servidor de la reunión; el servidor lo reparte en el chat a todos. Antes se
+ * cifra en el navegador (contenido, nombre y tipo): el servidor guarda bytes que no puede leer.
+ */
 export function subirArchivo(
   archivo: File,
   clave: string,
   alProgresar: (fraccion: number) => void,
 ): { promesa: Promise<void>; cancelar: () => void } {
   const peticion = new XMLHttpRequest();
-  const promesa = new Promise<void>((resolver, rechazar) => {
-    peticion.open("POST", `${urlServidor()}/archivos?nombre=${encodeURIComponent(archivo.name)}`);
+  let cancelado = false;
+  const promesa = Promise.all([archivo.arrayBuffer().then((bytes) => cifrarBytes(bytes)), cifrarTexto(JSON.stringify({ n: archivo.name, t: archivo.type }))]).then(
+    ([cuerpo, nombre]) => enviar(peticion, cuerpo, nombre, clave, alProgresar, () => cancelado),
+  );
+  return {
+    promesa,
+    cancelar: () => {
+      cancelado = true;
+      peticion.abort();
+    },
+  };
+}
+
+function enviar(peticion: XMLHttpRequest, cuerpo: Uint8Array<ArrayBuffer>, nombre: string, clave: string, alProgresar: (fraccion: number) => void, cancelado: () => boolean): Promise<void> {
+  return new Promise<void>((resolver, rechazar) => {
+    if (cancelado()) return rechazar(new Error("Cancelado"));
+    peticion.open("POST", `${urlServidor()}/archivos?nombre=${encodeURIComponent(nombre)}`);
     peticion.setRequestHeader("X-Clave", clave);
     peticion.upload.onprogress = (evento) => {
       if (evento.lengthComputable) alProgresar(evento.loaded / evento.total);
@@ -19,13 +38,19 @@ export function subirArchivo(
     };
     peticion.onerror = () => rechazar(new Error("Se cortó la conexión al enviar el archivo."));
     peticion.onabort = () => rechazar(new Error("Cancelado"));
-    peticion.send(archivo);
+    peticion.send(new Blob([cuerpo], { type: "application/octet-stream" }));
   });
-  return { promesa, cancelar: () => peticion.abort() };
 }
 
-export function urlArchivo(id: string, ver = false): string {
-  return `${urlServidor()}/archivos/${encodeURIComponent(id)}${ver ? "?ver=1" : ""}`;
+/** Descarga un archivo (o un audio de reconexión) del servidor y lo descifra. */
+export async function obtenerArchivo(id: string, tipo: string): Promise<Blob> {
+  const respuesta = await fetch(urlArchivo(id), { cache: "no-store" });
+  if (!respuesta.ok) throw new Error("El archivo ya no está disponible.");
+  return new Blob([await descifrarBytes(await respuesta.arrayBuffer())], { type: tipo });
+}
+
+function urlArchivo(id: string): string {
+  return `${urlServidor()}/archivos/${encodeURIComponent(id)}`;
 }
 
 /** Igual que en Kubox: tamaño legible. */

@@ -23,7 +23,7 @@ const videosVivos = (pagina) =>
     for (let i = 0; i < N; i++) {
       const contexto = await navegador.newContext({ permissions: ["camera", "microphone"], viewport: { width: 1280, height: 760 } });
       const pagina = await contexto.newPage();
-      await pagina.goto(`${BASE}/${SALA}`);
+      await pagina.goto(`${BASE}/${SALA}#clave-de-la-prueba-grande`);
       await pagina.getByLabel("Tu nombre").fill(`Persona ${String(i + 1).padStart(2, "0")}`);
       await pagina.getByRole("button", { name: "Unirse ahora" }).click();
       await pagina.getByLabel("Salir de la llamada").waitFor();

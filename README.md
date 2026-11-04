@@ -12,6 +12,36 @@ compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compart
 - Anfitrión: silenciar y expulsar.
 - Celular: modo bolsillo, sigue la llamada con la pantalla bloqueada y recupera el sitio tras un corte.
 - Instalable como app (PWA) y sin cuentas: basta con compartir el enlace de la sala.
+- **Cifrado de extremo a extremo** de audio, vídeo, chat, archivos y nombres (ver abajo).
+
+## Seguridad y privacidad
+
+Cada reunión tiene una **clave secreta** que viaja en el enlace tras el `#`
+(`https://…/abc-defg-hij#clave`). Los navegadores nunca envían esa parte al servidor. Al abrir el
+enlace, la clave se guarda solo en esa pestaña y se borra de la barra de direcciones. Quien crea la
+reunión también puede elegir una contraseña propia (mínimo 8 caracteres) y dictarla junto al código.
+
+De la clave se derivan, en el navegador (PBKDF2 con 210 000 iteraciones y HKDF, sal = código de sala):
+
+| Clave | Para qué |
+|---|---|
+| Medios (AES-GCM 256) | Cada fotograma de audio y vídeo, con WebRTC Encoded Transform. Solo quedan en claro los primeros bytes de cada fotograma (1 en audio, 3 o 10 en vídeo) para que el servidor sepa dónde empieza un fotograma clave. |
+| Datos (AES-GCM 256) | Chat, nombres de las personas, archivos (contenido, nombre y tipo) y el audio grabado sin conexión. |
+| Acceso | Una huella que el servidor compara para dejar entrar. No sirve para descifrar nada. |
+
+Qué ve cada parte:
+
+- **El servidor** (y quien lo administre): quién se conecta (IP), cuándo, cuántas personas hay, el
+  tamaño de los archivos y el estado de micrófono, cámara y mano alzada. No ve ni oye el contenido.
+- **Cloudflare** (túnel y TURN): lo mismo que el servidor como mucho. El HTTPS termina en su red,
+  pero lo que pasa por ahí ya va cifrado de extremo a extremo.
+- **Quien tenga el enlace completo** puede entrar y descifrar: compártelo solo por un canal de confianza.
+
+Además: los códigos de reunión tienen al menos 10 letras, el servidor espera un segundo antes de
+responder a una clave incorrecta, la señalización solo acepta conexiones desde la propia web, el
+registro no guarda nombres ni nombres de archivo, y la web se sirve con cabeceras que impiden
+incrustarla en otras páginas. El cifrado de medios necesita un navegador actual (Chrome, Edge,
+Firefox o Safari recientes).
 
 ## Cómo se usa
 
@@ -22,7 +52,8 @@ compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compart
    - Abre un **enlace público HTTPS** con un túnel rápido de Cloudflare (gratis, sin cuenta; la
      primera vez descarga `cloudflared`).
    - Muestra los enlaces y abre el navegador.
-2. Comparte el enlace `https://….trycloudflare.com`. En tu misma red también vale
+2. Pulsa **Nueva reunión** y comparte el enlace que copia el botón (lleva la clave tras el `#`).
+   El servidor está en `https://….trycloudflare.com`. En tu misma red también vale
    `https://<tu IP local>:8443` (el navegador avisará del certificado la primera vez).
 3. Deja la ventana abierta mientras dure la reunión.
 
@@ -93,6 +124,7 @@ junto al ejecutable). Plantilla completa en [`despliegue/ubuntu/agora.env.exampl
 | `MEET_URL_PUBLICA` | `--url-publica` | (túnel rápido) | Dominio propio en lugar de trycloudflare |
 | `MEET_SIN_TUNEL`, `MEET_SIN_UPNP`, `MEET_SIN_NAVEGADOR` | `--sin-tunel`, `--sin-upnp`, `--sin-navegador` | false | Desactivan cada paso del arranque |
 | `MEET_TURN_CLOUDFLARE_ID`, `MEET_TURN_CLOUDFLARE_TOKEN` | (solo entorno) | vacío | Relé TURN de Cloudflare para atravesar CGNAT |
+| `MEET_ORIGENES_PERMITIDOS` | (solo entorno) | vacío | Hosts extra desde los que se acepta la señalización, separados por comas |
 
 `agora.env` contiene claves y está en `.gitignore`: no lo subas al repositorio.
 
@@ -107,6 +139,7 @@ src/
   estado/           Estado de la reunión (zustand) y controles locales
   medios/           Cámara, micrófono, sonidos y detección de voz
   red/              Cliente de señalización, conexión con el SFU y protocolo
+  cifrado/          Claves de la reunión, cifrado de medios (trabajador), mensajes y audio de reconexión
 despliegue/ubuntu/  Servicio systemd e instalador para Linux
 scripts/            Desarrollo y construcción de los ejecutables
 pruebas/            Pruebas de extremo a extremo con Playwright
@@ -123,6 +156,7 @@ npm run dev      # servidor Go en :8090 y web con recarga en http://localhost:31
 npm run exe      # dist/AgoraServidor.exe y dist/agora-servidor-linux
 npm test         # pruebas del servidor (Go)
 npm run test:e2e # dos navegadores contra http://localhost:8090 (requiere Playwright)
+API_ANTIGUA=1 npm run test:e2e  # lo mismo con la API de cifrado antigua de Chrome
 node pruebas/e2e-grande.cjs http://localhost:8090 12   # reunión de 12 con paginación
 ```
 

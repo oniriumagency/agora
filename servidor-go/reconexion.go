@@ -36,7 +36,7 @@ func (s *Servidor) desconectar(p *Participante, adrede bool) {
 	p.datos.Estado.Pantalla = false
 	estado := p.datos.Estado
 	sala.mu.Unlock()
-	log.Printf("[Sala %s] %s perdió la conexión; se le guarda el sitio %s", sala.codigo, p.datos.Nombre, s.config.graciaReconexion)
+	log.Printf("[Sala %s] %s perdió la conexión; se le guarda el sitio %s", sala.codigo, p.id[:6], s.config.graciaReconexion)
 	// Desde el último latido: lo que se dijo mientras el corte aún no se notaba también se repone
 	p.ausenteDesde = p.ultimaSenal.Load()
 	if p.ausenteDesde == 0 || ahoraMs()-p.ausenteDesde > ventanaFija.Milliseconds() {
@@ -59,7 +59,7 @@ func (s *Servidor) desconectar(p *Participante, adrede bool) {
 // retomar (expiró o es otra sala): entonces se entra como alguien nuevo.
 func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) bool {
 	anterior := s.participantePorClave(m.Reanudar)
-	if anterior == nil || anterior == p || anterior.sala == nil || anterior.sala.codigo != m.Sala {
+	if anterior == nil || anterior == p || anterior.sala == nil || anterior.sala.codigo != m.Sala || anterior.sala.acceso != m.Acceso {
 		return false
 	}
 	sala := anterior.sala
@@ -112,6 +112,6 @@ func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) 
 		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "reanudada": true, "anfitrion": anfitrion, "ausenteDesde": ausenteDesde})
 	sala.difundir(M{"tipo": "ESTADO", "id": p.id, "estado": estado}, p.id)
 	sala.actualizarResto(p.id)
-	log.Printf("[Sala %s] %s volvió a conectarse", sala.codigo, p.datos.Nombre)
+	log.Printf("[Sala %s] %s volvió a conectarse", sala.codigo, p.id[:6])
 	return true
 }

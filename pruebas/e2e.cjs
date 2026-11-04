@@ -6,13 +6,16 @@ const { chromium } = require("playwright");
 const BASE = process.argv[2] ?? "http://localhost:8090";
 const CAPTURAS = process.argv[3] ?? null;
 const SALA = `prueba-${Math.random().toString(36).slice(2, 8)}`;
+const CLAVE = `clave-de-prueba-${Math.random().toString(36).slice(2, 8)}`;
+// Todo lo que sale por la señalización: nada de esto debe viajar en claro
+const ENVIADO = [];
 
 function comprobar(condicion, mensaje) {
   if (!condicion) throw new Error(`FALLO: ${mensaje}`);
   console.log(`  ok  ${mensaje}`);
 }
 
-async function entrar(navegador, nombre) {
+async function entrar(navegador, nombre, clave = CLAVE) {
   const contexto = await navegador.newContext({ permissions: ["camera", "microphone"], viewport: { width: 1280, height: 760 } });
   const pagina = await contexto.newPage();
   // Guarda los WebSocket para poder simular un corte (como al bloquear el celular)
@@ -26,16 +29,20 @@ async function entrar(navegador, nombre) {
       }
     };
   });
+  // API_ANTIGUA=1 prueba el cifrado con createEncodedStreams (Chrome sin RTCRtpScriptTransform)
+  if (process.env.API_ANTIGUA) await pagina.addInitScript(() => delete window.RTCRtpScriptTransform);
   pagina.__salidas = 0;
   pagina.on("websocket", (ws) => ws.on("framereceived", (f) => String(f.payload).includes('"SALIO"') && pagina.__salidas++));
+  pagina.on("websocket", (ws) => ws.on("framesent", (f) => ENVIADO.push(String(f.payload))));
+  pagina.on("request", (r) => r.postDataBuffer() && ENVIADO.push(r.postDataBuffer().toString("latin1") + r.url()));
   if (process.env.DEPURAR) pagina.on("websocket", (ws) => { ws.on("framereceived", (f) => console.log(`[${nombre}] <-`, String(f.payload).slice(0, 90))); ws.on("framesent", (f) => console.log(`[${nombre}] ->`, String(f.payload).slice(0, 90))); });
   pagina.on("console", (m) => m.type() === "error" && console.error(`[${nombre}] consola:`, m.text().slice(0, 400)));
   pagina.on("pageerror", (error) => console.error(`[${nombre}] error de página:`, error.message));
-  await pagina.goto(`${BASE}/${SALA}`);
+  await pagina.goto(`${BASE}/${SALA}#${clave}`);
   await pagina.getByLabel("Tu nombre").fill(nombre);
   await pagina.waitForSelector("video");
   await pagina.getByRole("button", { name: "Unirse ahora" }).click();
-  await pagina.getByLabel("Salir de la llamada").waitFor();
+  if (clave === CLAVE) await pagina.getByLabel("Salir de la llamada").waitFor();
   return pagina;
 }
 
@@ -80,8 +87,18 @@ async function videoVivo(pagina, textoEtiqueta) {
     const tarjeta = beto.getByRole("log").getByLabel("Descargar captura.png");
     await tarjeta.waitFor();
     await beto.waitForFunction(() => [...document.querySelectorAll('[role="log"] img')].some((img) => img.complete && img.naturalWidth === 1));
-    const descarga = await beto.request.get(await tarjeta.getAttribute("href"));
-    comprobar(Buffer.compare(await descarga.body(), png) === 0 && /attachment/.test(descarga.headers()["content-disposition"]), "Beto recibe el archivo adjunto de Ana, con vista previa y descarga");
+    const [descarga] = await Promise.all([beto.waitForEvent("download"), tarjeta.click()]);
+    const bajado = require("fs").readFileSync(await descarga.path());
+    comprobar(Buffer.compare(bajado, png) === 0 && descarga.suggestedFilename() === "captura.png", "Beto recibe el archivo adjunto de Ana, con vista previa y descarga");
+
+    const enClaro = ENVIADO.filter((m) => /"nombre":"(Ana|Beto)"|me escuchan|captura\.png|IHDR/.test(m));
+    comprobar(enClaro.length === 0, "Nombres, chat y archivos salen cifrados (el servidor no los ve)");
+    comprobar(!(await ana.evaluate(() => location.hash)), "La clave desaparece de la barra de direcciones");
+
+    const intruso = await entrar(navegador, "Intrusa", "otra-clave-cualquiera");
+    const rechazada = await intruso.getByText("La clave de la reunión no es correcta").waitFor({ timeout: 10000 }).then(() => true, () => false);
+    comprobar(rechazada, "Sin la clave correcta no se entra");
+    await intruso.context().close();
 
     await beto.getByLabel("Enviar una reacción").click();
     await beto.getByLabel("Reaccionar con 🎉").click();

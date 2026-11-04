@@ -20,6 +20,8 @@ type Sala struct {
 	chat     []MensajeChat
 	// anfitrion: quien abrió la reunión (o el siguiente en llegar si se fue). Puede silenciar y expulsar.
 	anfitrion string
+	// acceso: huella de la clave que fijó quien abrió la reunión; los demás deben traer la misma.
+	acceso string
 	// vetados: dispositivos expulsados; no pueden volver a esta reunión mientras exista.
 	vetados map[string]bool
 	// grabacion: audio reciente mientras alguien está desconectado (ver grabacion.go)

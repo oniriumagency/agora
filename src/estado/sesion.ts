@@ -8,6 +8,10 @@ import { descartarGrabacion, enviarLoGrabado, escucharLoQueDijo, grabarSinConexi
 import { anunciarLlamada, reflejarEstadoLlamada, terminarLlamada } from "@/medios/sesionMultimedia";
 import { sonarEntrada, sonarSalida } from "@/medios/sonidos";
 import { mantenerPantallaEncendida, soltarPantallaEncendida } from "@/medios/pantallaEncendida";
+import { cifrarTexto, clavesActuales } from "@/cifrado/claves";
+import { detenerCifradoMedios } from "@/cifrado/medios";
+import { enOrden } from "@/cifrado/mensajes";
+import { olvidarSecreto } from "@/cifrado/secretoSala";
 
 /**
  * Ciclo de vida de una reunión: conectar al servidor, unirse, abrir la conexión WebRTC con el SFU
@@ -177,7 +181,9 @@ function alRecibir(mensaje: MensajeServidor): void {
       medios?.fijarMapa(mensaje.mapa);
       return;
     case "ERROR":
-      if (mensaje.codigo === "SALA_LLENA" || mensaje.codigo === "LIMITE_SALAS" || mensaje.codigo === "EXPULSADO") {
+      const alEntrar = mensaje.codigo === "MENSAJE_INVALIDO" && s.fase === "conectando";
+      if (["SALA_LLENA", "LIMITE_SALAS", "EXPULSADO", "CLAVE_INCORRECTA"].includes(mensaje.codigo) || alEntrar) {
+        if (mensaje.codigo === "CLAVE_INCORRECTA") olvidarSecreto(s.sala); // al volver a intentarlo se pide de nuevo
         s.fijar({ fase: "error", error: mensaje.mensaje });
         cliente?.cerrar();
       } else console.warn(`[Servidor] ${mensaje.codigo}: ${mensaje.mensaje}`);
@@ -223,14 +229,17 @@ function programarReintento(): void {
 async function conectarYUnirse(): Promise<void> {
   servidoresIce = null;
   const { clave: claveAnterior, fase } = estado();
-  cliente = new ClienteSenal(alRecibir, alCerrar);
+  const claves = clavesActuales();
+  if (!claves) throw new Error("Falta la clave de la reunión.");
+  cliente = new ClienteSenal(enOrden(alRecibir), alCerrar);
   await cliente.conectar();
   await esperarServidoresIce();
   const { sala, miNombre, local } = estado();
   cliente.enviar({
     tipo: "UNIRSE",
     sala,
-    nombre: miNombre,
+    nombre: await cifrarTexto(miNombre),
+    acceso: claves.acceso,
     estado: { microfono: local.microfono, camara: local.camara, pantalla: local.pantalla },
     reanudar: fase === "reconectando" && claveAnterior ? claveAnterior : undefined,
     dispositivo: idDispositivo(),
@@ -333,6 +342,7 @@ function cerrarTodo(): void {
   cliente = null;
   medios?.cerrar();
   medios = null;
+  detenerCifradoMedios();
   soltarMedios();
   estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null, clave: null, anfitrion: null, reponiendo: false });
 }

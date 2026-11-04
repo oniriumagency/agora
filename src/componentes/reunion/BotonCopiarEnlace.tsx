@@ -2,20 +2,21 @@
 import { useState } from "react";
 import { useReunion } from "@/estado/useReunion";
 import { enlaceDeSala } from "@/utilidades/codigoSala";
+import { secretoDe } from "@/cifrado/secretoSala";
 import { IconoCopiar } from "../comunes/Iconos";
 
-/** Copia el enlace de la reunión al portapapeles y confirma durante unos segundos. */
+/** Copia el enlace de la reunión (con su clave tras el #) al portapapeles y confirma unos segundos. */
 export function BotonCopiarEnlace({ oscuro = false }: { oscuro?: boolean }) {
   const sala = useReunion((estado) => estado.sala);
   const [copiado, setCopiado] = useState(false);
 
   async function copiar() {
     try {
-      await navigator.clipboard.writeText(enlaceDeSala(sala));
+      await navigator.clipboard.writeText(enlaceDeSala(sala, secretoDe(sala)));
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2500);
     } catch {
-      window.prompt("Copia el enlace de la reunión:", enlaceDeSala(sala));
+      window.prompt("Copia el enlace de la reunión:", enlaceDeSala(sala, secretoDe(sala)));
     }
   }
 

@@ -97,6 +97,7 @@ func main() {
 		}
 	}
 	defer detenerTunel()
+	permitirHost(publica)
 	if red.mapeo != nil {
 		defer red.mapeo.quitar()
 	}

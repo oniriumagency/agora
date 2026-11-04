@@ -1,4 +1,5 @@
 import type { CargaSenal, TipoPista } from "./protocolo";
+import { protegerEmisor, protegerReceptor, usaFlujosCodificados } from "@/cifrado/medios";
 
 /**
  * Conexión WebRTC única con el servidor (SFU).
@@ -7,6 +8,9 @@ import type { CargaSenal, TipoPista } from "./protocolo";
  * solo ofrece el servidor, cuando añade ranuras para recibir a más gente. Encender o apagar la
  * cámara o la pantalla es un replaceTrack, sin renegociar. El mapa de PISTAS dice de quién es cada
  * ranura; con él se reconstruyen los flujos de cada participante.
+ *
+ * Todo emisor y receptor pasa por el cifrado de extremo a extremo (ver cifrado/medios.ts): el
+ * servidor reenvía fotogramas que no puede descifrar.
  */
 /** Si en este tiempo no se llega a conectar, la red no lo permite (Chrome tarda en declarar "failed"). */
 const ESPERA_MAXIMA_CONEXION_MS = 25_000;
@@ -34,11 +38,15 @@ export class ConexionSfu {
   private avisada = false;
 
   constructor(servidoresIce: RTCIceServer[], private readonly eventos: EventosSfu) {
-    this.conexion = new RTCPeerConnection({ iceServers: servidoresIce, bundlePolicy: "max-bundle" });
+    const configuracion = { iceServers: servidoresIce, bundlePolicy: "max-bundle", encodedInsertableStreams: usaFlujosCodificados() } as RTCConfiguration;
+    this.conexion = new RTCPeerConnection(configuracion);
     this.conexion.onicecandidate = ({ candidate }) => {
       if (candidate) this.eventos.enviarSenal(candidate.toJSON() as CargaSenal);
     };
-    this.conexion.ontrack = () => this.recalcular();
+    this.conexion.ontrack = ({ receiver }) => {
+      protegerReceptor(receiver);
+      this.recalcular();
+    };
     this.conexion.onconnectionstatechange = () => {
       const estado = this.conexion.connectionState;
       if (estado === "connected") this.conecto = true;
@@ -51,6 +59,7 @@ export class ConexionSfu {
   async iniciar(pistas: Readonly<Record<TipoPista, MediaStreamTrack | null>>): Promise<void> {
     for (const tipo of ORDEN_PISTAS) {
       const transceptor = this.conexion.addTransceiver(CLASE[tipo], { direction: "sendonly" });
+      protegerEmisor(transceptor.sender, CLASE[tipo]);
       await transceptor.sender.replaceTrack(pistas[tipo]);
       this.envios.set(tipo, transceptor.sender);
     }

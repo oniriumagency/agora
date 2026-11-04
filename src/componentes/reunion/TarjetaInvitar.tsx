@@ -19,7 +19,7 @@ export function TarjetaInvitar() {
           <IconoCerrar tam={20} />
         </button>
       </div>
-      <p className="mt-2 text-sm text-gray-600">Comparte este enlace con las personas que quieras en la reunión.</p>
+      <p className="mt-2 text-sm text-gray-600">Comparte el enlace con las personas que quieras en la reunión. Lleva la clave de cifrado: envíalo solo por un canal de confianza.</p>
       <p className="mt-3 truncate rounded-md bg-gray-100 px-3 py-2.5 font-mono text-sm text-gray-800">
         {typeof window !== "undefined" ? window.location.host : ""}/{sala}
       </p>

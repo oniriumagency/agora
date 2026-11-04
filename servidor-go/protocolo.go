@@ -63,6 +63,9 @@ type MensajeEntrante struct {
 	} `json:"estado"`
 	// Reanudar: clave de una conexión anterior de esta misma persona para retomar su sitio.
 	Reanudar string `json:"reanudar"`
+	// Acceso: huella de la clave de la reunión. La clave nunca llega al servidor (va en el # del
+	// enlace); sin la huella correcta no se entra.
+	Acceso string `json:"acceso"`
 	// Dispositivo: identificador aleatorio guardado en el navegador (para no dejar volver a un expulsado).
 	Dispositivo string          `json:"dispositivo"`
 	Accion      string          `json:"accion"`

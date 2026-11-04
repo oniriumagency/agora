@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,8 +21,6 @@ var fechaCero = time.Time{}
 
 const maximoBytesPorSala = 2 << 30 // 2 GB
 
-var tiposConVista = map[string]bool{"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true}
-
 type ArchivoChat struct {
 	ID          string `json:"id"`
 	Nombre      string `json:"nombre"`
@@ -34,9 +31,8 @@ type ArchivoChat struct {
 
 type archivoGuardado struct {
 	ArchivoChat
-	ruta    string
-	sala    *Sala
-	enLinea bool // audio de reconexión: se reproduce en el navegador, no se descarga
+	ruta string
+	sala *Sala
 }
 
 type almacenArchivos struct {
@@ -102,9 +98,11 @@ func (s *Servidor) subirArchivo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Solo quien está en la reunión puede enviar archivos.", http.StatusForbidden)
 		return
 	}
-	nombre := limpiarTexto(filepath.Base(strings.ReplaceAll(r.URL.Query().Get("nombre"), "\\", "/")), 120, false)
-	if nombre == "" || nombre == "." || nombre == "/" {
-		nombre = "archivo"
+	// El nombre y el contenido llegan cifrados: el servidor guarda bytes que no puede leer.
+	nombre := r.URL.Query().Get("nombre")
+	if !cifradoValido(nombre, 1200) {
+		http.Error(w, "Nombre de archivo no válido.", http.StatusBadRequest)
+		return
 	}
 	limite := int64(s.config.maximoArchivoMB) << 20
 	if r.ContentLength > limite {
@@ -121,7 +119,7 @@ func (s *Servidor) subirArchivo(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	log.Printf("[Sala %s] %s compartió %s (%s)", p.sala.codigo, p.datos.Nombre, nombre, formatearBytes(archivo.Tamano))
+	log.Printf("[Sala %s] %s compartió un archivo cifrado (%s)", p.sala.codigo, p.id[:6], formatearBytes(archivo.Tamano))
 	mensaje := p.sala.agregarChat(p, "", &archivo.ArchivoChat)
 	p.sala.difundir(M{"tipo": "CHAT", "mensaje": mensaje}, "")
 	w.WriteHeader(http.StatusCreated)
@@ -134,18 +132,11 @@ func (a *almacenArchivos) guardar(sala *Sala, nombre string, cuerpo io.Reader) (
 	if err != nil {
 		return nil, errors.New("no se pudo guardar el archivo")
 	}
-	cabecera := make([]byte, 512)
-	leidos, _ := io.ReadFull(cuerpo, cabecera)
-	cabecera = cabecera[:leidos]
-	tamano, err := io.Copy(destino, io.MultiReader(strings.NewReader(string(cabecera)), cuerpo))
+	tamano, err := io.Copy(destino, cuerpo)
 	destino.Close()
 	if err != nil {
 		_ = os.Remove(ruta)
 		return nil, err
-	}
-	tipo := http.DetectContentType(cabecera)
-	if porExtension := mime.TypeByExtension(strings.ToLower(filepath.Ext(nombre))); porExtension != "" && !strings.HasPrefix(tipo, "image/") {
-		tipo = porExtension
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -154,12 +145,12 @@ func (a *almacenArchivos) guardar(sala *Sala, nombre string, cuerpo io.Reader) (
 		return nil, errors.New("la reunión ya compartió demasiados archivos (2 GB)")
 	}
 	a.usado[sala] += tamano
-	guardado := &archivoGuardado{ArchivoChat: ArchivoChat{ID: id, Nombre: nombre, Tamano: tamano, Tipo: tipo, VistaPrevia: tiposConVista[http.DetectContentType(cabecera)]}, ruta: ruta, sala: sala}
+	guardado := &archivoGuardado{ArchivoChat: ArchivoChat{ID: id, Nombre: nombre, Tamano: tamano, Tipo: "application/octet-stream"}, ruta: ruta, sala: sala}
 	a.porID[id] = guardado
 	return guardado, nil
 }
 
-// descargarArchivo sirve /archivos/<id>. Siempre como descarga, salvo imágenes seguras con ?ver=1.
+// descargarArchivo sirve /archivos/<id>: bytes cifrados que el navegador descifra; siempre como descarga.
 func (s *Servidor) descargarArchivo(w http.ResponseWriter, r *http.Request) {
 	permitirOrigenes(w)
 	id := strings.TrimPrefix(r.URL.Path, "/archivos/")
@@ -179,13 +170,8 @@ func (s *Servidor) descargarArchivo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
 	w.Header().Set("Cache-Control", "private, max-age=3600")
-	disposicion := "attachment"
-	tipo := "application/octet-stream"
-	if r.URL.Query().Get("ver") == "1" && (archivo.VistaPrevia || archivo.enLinea) {
-		disposicion, tipo = "inline", archivo.Tipo
-	}
-	w.Header().Set("Content-Type", tipo)
-	w.Header().Set("Content-Disposition", mime.FormatMediaType(disposicion, map[string]string{"filename": archivo.Nombre}))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment")
 	http.ServeContent(w, r, "", fechaCero, contenido)
 }
 
@@ -223,13 +209,7 @@ func (s *Servidor) subirVoz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No se pudo guardar el audio.", http.StatusRequestEntityTooLarge)
 		return
 	}
-	s.archivos.mu.Lock()
-	archivo.enLinea = true
-	if tipo := r.Header.Get("Content-Type"); strings.HasPrefix(tipo, "audio/") {
-		archivo.Tipo = tipo
-	}
-	s.archivos.mu.Unlock()
-	log.Printf("[Sala %s] %s envió lo que dijo sin conexión (%s)", p.sala.codigo, p.datos.Nombre, formatearBytes(archivo.Tamano))
+	log.Printf("[Sala %s] %s envió lo que dijo sin conexión (%s)", p.sala.codigo, p.id[:6], formatearBytes(archivo.Tamano))
 	p.sala.difundir(M{"tipo": "VOZ", "id": archivo.ID, "autor": p.id, "nombre": p.datos.Nombre}, p.id)
 	w.WriteHeader(http.StatusCreated)
 }

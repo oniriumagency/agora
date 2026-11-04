@@ -92,17 +92,17 @@ func (p *Participante) crearConexion(api *webrtc.API, ice []webrtc.ICEServer) er
 		switch estado {
 		case webrtc.PeerConnectionStateConnected:
 			if !conecto {
-				log.Printf("[Medios] %s conectado.", p.datos.Nombre)
+				log.Printf("[Medios] %s conectado.", p.id[:6])
 			}
 			conecto = true
 		case webrtc.PeerConnectionStateFailed:
 			if conecto {
 				// Corte de red tras haber funcionado: se cierra para que el navegador vuelva a entrar
-				log.Printf("[Medios] Se cortó la conexión con %s; volverá a entrar.", p.datos.Nombre)
+				log.Printf("[Medios] Se cortó la conexión con %s; volverá a entrar.", p.id[:6])
 				_ = p.conn.Close()
 				return
 			}
-			log.Printf("[Medios] %s no pudo conectar el audio ni el vídeo: su red no llega al puerto de medios. %s", p.datos.Nombre, pistaSinConexion())
+			log.Printf("[Medios] %s no pudo conectar el audio ni el vídeo: su red no llega al puerto de medios. %s", p.id[:6], pistaSinConexion())
 		}
 	})
 	return nil
@@ -128,7 +128,7 @@ func (p *Participante) recibirSenal(carga *CargaSenal) {
 			return // solo se admite la oferta inicial
 		}
 		if err := p.pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: carga.SDP}); err != nil {
-			log.Printf("[Medios] Oferta no válida de %s: %v", p.datos.Nombre, err)
+			log.Printf("[Medios] Oferta no válida de %s: %v", p.id[:6], err)
 			return
 		}
 		respuesta, err := p.pc.CreateAnswer(nil)
@@ -136,7 +136,7 @@ func (p *Participante) recibirSenal(carga *CargaSenal) {
 			err = p.pc.SetLocalDescription(respuesta)
 		}
 		if err != nil {
-			log.Printf("[Medios] No se pudo responder a %s: %v", p.datos.Nombre, err)
+			log.Printf("[Medios] No se pudo responder a %s: %v", p.id[:6], err)
 			return
 		}
 		p.enviar(M{"tipo": "SENAL", "carga": CargaSenal{Tipo: "answer", SDP: p.pc.LocalDescription().SDP}})
@@ -147,7 +147,7 @@ func (p *Participante) recibirSenal(carga *CargaSenal) {
 			return
 		}
 		if err := p.pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: carga.SDP}); err != nil {
-			log.Printf("[Medios] Respuesta no válida de %s: %v", p.datos.Nombre, err)
+			log.Printf("[Medios] Respuesta no válida de %s: %v", p.id[:6], err)
 		}
 		p.esperando = false
 		p.enviarMapa()
@@ -194,7 +194,7 @@ func (p *Participante) actualizar() {
 		err = p.pc.SetLocalDescription(oferta)
 	}
 	if err != nil {
-		log.Printf("[Medios] No se pudo ofrecer a %s: %v", p.datos.Nombre, err)
+		log.Printf("[Medios] No se pudo ofrecer a %s: %v", p.id[:6], err)
 		return
 	}
 	for _, t := range p.pc.GetTransceivers() {

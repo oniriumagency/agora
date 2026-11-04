@@ -3,7 +3,6 @@ package main
 import (
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 // Validación de todo lo que llega del navegador: nada se da por bueno.
@@ -11,35 +10,39 @@ import (
 var patronSala = regexp.MustCompile(`^[a-z0-9]{3,12}(-[a-z0-9]{3,12}){0,3}$`)
 
 const (
-	largoMaximoNombre = 40
-	largoMaximoChat   = 1000
+	// Nombres, chat y nombres de archivo llegan cifrados (base64url): el servidor no los lee, solo
+	// limita su tamaño. 40 caracteres de nombre y 1000 de chat cifrados caben con holgura.
+	largoMaximoNombre = 400
+	largoMaximoChat   = 6000
 	largoMaximoSDP    = 64_000
+	// minimoLetrasSala: los códigos de reunión deben ser largos (los generados tienen 10 letras).
+	minimoLetrasSala = 10
 )
+
+// patronAcceso: huella de 32 bytes en base64url que el navegador deriva de la clave de la reunión.
+var patronAcceso = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
 
 var reacciones = map[string]bool{"👍": true, "❤️": true, "😂": true, "😮": true, "👏": true, "🎉": true}
 
-// limpiarTexto quita caracteres de control (salvo saltos de línea) y recorta espacios y longitud.
-func limpiarTexto(texto string, maximo int, permitirSaltos bool) string {
-	var b strings.Builder
-	for _, r := range texto {
-		if r == '\n' && permitirSaltos {
-			b.WriteRune(r)
-			continue
-		}
-		if unicode.IsControl(r) {
-			continue
-		}
-		b.WriteRune(r)
-	}
-	limpio := []rune(strings.TrimSpace(b.String()))
-	if len(limpio) > maximo {
-		limpio = limpio[:maximo]
-	}
-	return strings.TrimSpace(string(limpio))
+func salaValida(sala string) bool {
+	return len(sala) <= 60 && patronSala.MatchString(sala) && len(strings.ReplaceAll(sala, "-", "")) >= minimoLetrasSala
 }
 
-func salaValida(sala string) bool {
-	return len(sala) <= 60 && patronSala.MatchString(sala)
+func accesoValido(acceso string) bool {
+	return patronAcceso.MatchString(acceso)
+}
+
+// cifradoValido: texto cifrado por el navegador (base64url con prefijo de versión), sin recortarlo.
+func cifradoValido(texto string, maximo int) bool {
+	if len(texto) < 4 || len(texto) > maximo {
+		return false
+	}
+	for _, r := range texto {
+		if !(r == '-' || r == '_' || r == '.' || (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
+			return false
+		}
+	}
+	return true
 }
 
 func cargaValida(c *CargaSenal) bool {

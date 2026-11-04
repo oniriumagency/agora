@@ -24,7 +24,7 @@ func (s *Servidor) moderar(p *Participante, accion, objetivo string) {
 		sala.mu.Unlock()
 		q.enviar(M{"tipo": "SILENCIADO", "por": p.datos.Nombre})
 		sala.difundir(M{"tipo": "ESTADO", "id": q.id, "estado": estado}, q.id)
-		log.Printf("[Sala %s] %s silenció a %s", sala.codigo, p.datos.Nombre, q.datos.Nombre)
+		log.Printf("[Sala %s] %s silenció a %s", sala.codigo, p.id[:6], q.id[:6])
 	case "expulsar":
 		sala.mu.Lock()
 		if q.dispositivo != "" {
@@ -35,7 +35,7 @@ func (s *Servidor) moderar(p *Participante, accion, objetivo string) {
 		}
 		sala.mu.Unlock()
 		q.enviar(M{"tipo": "EXPULSADO", "por": p.datos.Nombre})
-		log.Printf("[Sala %s] %s expulsó a %s", sala.codigo, p.datos.Nombre, q.datos.Nombre)
+		log.Printf("[Sala %s] %s expulsó a %s", sala.codigo, p.id[:6], q.id[:6])
 		s.salir(q)
 		_ = q.conn.Close()
 	default:

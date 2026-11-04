@@ -1,9 +1,11 @@
 package main
 
 import (
+	"crypto/subtle"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/pion/webrtc/v4"
 )
@@ -54,7 +56,7 @@ func (s *Servidor) ice() ([]ServidorIce, []webrtc.ICEServer) {
 }
 
 // entrar mete al participante en su sala o devuelve un código de error.
-func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
+func (s *Servidor) entrar(p *Participante, codigo, acceso string) (string, string) {
 	s.mu.Lock()
 	sala := s.salas[codigo]
 	if sala == nil {
@@ -68,6 +70,13 @@ func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
 	s.mu.Unlock()
 
 	sala.mu.Lock()
+	if sala.acceso == "" {
+		sala.acceso = acceso
+	} else if subtle.ConstantTimeCompare([]byte(sala.acceso), []byte(acceso)) != 1 {
+		sala.mu.Unlock()
+		time.Sleep(time.Second) // frena a quien prueba claves a ciegas
+		return "CLAVE_INCORRECTA", "La clave de la reunión no es correcta. Pide el enlace completo a quien te invitó."
+	}
 	if p.dispositivo != "" && sala.vetados[p.dispositivo] {
 		sala.mu.Unlock()
 		return "EXPULSADO", "El anfitrión te sacó de esta reunión."
@@ -96,7 +105,7 @@ func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
 	p.enviar(M{"tipo": "BIENVENIDA", "miId": p.id, "sala": codigo, "participantes": presentes, "chat": chat, "maximoVideos": s.config.maximoVideos,
 		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "anfitrion": anfitrion})
 	sala.difundir(M{"tipo": "ENTRO", "participante": p.datos}, p.id)
-	log.Printf("[Sala %s] Entró %s (%d personas)", codigo, p.datos.Nombre, len(presentes)+1)
+	log.Printf("[Sala %s] Entró %s (%d personas)", codigo, p.id[:6], len(presentes)+1)
 	return "", ""
 }
 
@@ -137,7 +146,7 @@ func (s *Servidor) salir(p *Participante) {
 	if !estaba {
 		return
 	}
-	log.Printf("[Sala %s] Salió %s (%d personas)", sala.codigo, p.datos.Nombre, quedan)
+	log.Printf("[Sala %s] Salió %s (%d personas)", sala.codigo, p.id[:6], quedan)
 	sala.difundir(M{"tipo": "SALIO", "id": p.id}, "")
 	if nuevoAnfitrion != "" {
 		sala.difundir(M{"tipo": "ANFITRION", "id": nuevoAnfitrion}, "")

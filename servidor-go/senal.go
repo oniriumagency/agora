@@ -21,9 +21,7 @@ const (
 var actualizador = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,
-	// La web se sirve desde el propio servidor (directo, red local o túnel); las salas se protegen
-	// con su código, así que no se filtra el origen.
-	CheckOrigin: func(*http.Request) bool { return true },
+	CheckOrigin:     origenPermitido,
 }
 
 func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +75,7 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 			inicioVentana, cuenta = time.Now(), 0
 		}
 		if cuenta++; cuenta > maximoPorVentana {
-			log.Printf("[Política] Conexión cerrada por exceso de mensajes.")
+			log.Printf("[Política] Conexión %s cerrada por exceso de mensajes.", p.id[:6])
 			adrede = true
 			return
 		}
@@ -137,8 +135,8 @@ func (s *Servidor) despachar(p *Participante, m *MensajeEntrante) {
 	case "ESTADO":
 		s.cambiarEstado(p, m.Cambios)
 	case "CHAT":
-		texto := limpiarTexto(m.Texto, largoMaximoChat, true)
-		if texto == "" || len(m.Texto) > largoMaximoChat*8 {
+		texto := m.Texto
+		if !cifradoValido(texto, largoMaximoChat) {
 			errorA(p, "MENSAJE_INVALIDO", "Mensaje vacío o demasiado largo.")
 			return
 		}
@@ -170,9 +168,9 @@ func (s *Servidor) unirse(p *Participante, m *MensajeEntrante) {
 		errorA(p, "YA_EN_SALA", "Esta conexión ya está en una reunión.")
 		return
 	}
-	nombre := limpiarTexto(m.Nombre, largoMaximoNombre, false)
-	if !salaValida(m.Sala) || nombre == "" || m.Estado == nil {
-		errorA(p, "MENSAJE_INVALIDO", "Código de reunión o nombre no válidos.")
+	nombre := m.Nombre
+	if !salaValida(m.Sala) || !cifradoValido(nombre, largoMaximoNombre) || !accesoValido(m.Acceso) || m.Estado == nil {
+		errorA(p, "MENSAJE_INVALIDO", "Código de reunión, clave o nombre no válidos.")
 		return
 	}
 	if len(m.Dispositivo) <= 64 {
@@ -187,7 +185,7 @@ func (s *Servidor) unirse(p *Participante, m *MensajeEntrante) {
 		errorA(p, "ERROR_INTERNO", "No se pudo preparar la conexión de medios.")
 		return
 	}
-	if codigo, texto := s.entrar(p, m.Sala); codigo != "" {
+	if codigo, texto := s.entrar(p, m.Sala, m.Acceso); codigo != "" {
 		_ = p.pc.Close()
 		errorA(p, codigo, texto)
 	}

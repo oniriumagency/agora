@@ -1,5 +1,6 @@
+import { cifrarTexto } from "@/cifrado/claves";
 import { abrirCamara, abrirMicrofono, abrirPantalla, describirErrorMedios, flujoDe } from "@/medios/mediosLocales";
-import type { Reaccion, TipoPista } from "@/red/protocolo";
+import { LARGO_MAXIMO_CHAT, type Reaccion, type TipoPista } from "@/red/protocolo";
 import { conexionActual, enviarAlServidor } from "./sesion";
 import { useReunion } from "./useReunion";
 
@@ -128,9 +129,10 @@ export function alternarMano(): void {
   enviarAlServidor({ tipo: "ESTADO", cambios: { mano: !levantada } });
 }
 
-export function enviarChat(texto: string): void {
-  const limpio = texto.trim();
-  if (limpio) enviarAlServidor({ tipo: "CHAT", texto: limpio });
+/** El texto sale cifrado con la clave de la reunión: el servidor solo lo reparte. */
+export async function enviarChat(texto: string): Promise<void> {
+  const limpio = texto.trim().slice(0, LARGO_MAXIMO_CHAT);
+  if (limpio) enviarAlServidor({ tipo: "CHAT", texto: await cifrarTexto(limpio) });
 }
 
 export function reaccionar(emoji: Reaccion): void {
