@@ -30,6 +30,8 @@ interface EstadoReunion {
   maximoArchivoMB: number;
   /** Id de quien modera la reunión (puede silenciar y expulsar). */
   anfitrion: string | null;
+  /** Escuchando a 1,5× lo que se dijo mientras no había conexión (el directo va en silencio). */
+  reponiendo: boolean;
   pagina: number;
   /** Problema con el audio y el vídeo (la reunión sigue: chat, mano, etc.). */
   avisoMedios: string | null;
@@ -87,6 +89,7 @@ export const useReunion = create<EstadoReunion>((set) => ({
   clave: null,
   maximoArchivoMB: 95,
   anfitrion: null,
+  reponiendo: false,
   pagina: 0,
   avisoMedios: null,
 

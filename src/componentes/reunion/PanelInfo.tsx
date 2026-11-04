@@ -42,6 +42,10 @@ export function PanelInfo() {
         Cada persona envía su audio y vídeo, cifrados, al servidor de esta reunión (el equipo de quien la organiza), que los reenvía a las demás. Solo descargas el
         vídeo de quien ves en pantalla. Si una red no permite la conexión directa, el tráfico pasa cifrado por un relé TURN que no puede ver el contenido.
       </p>
+      <p className="mt-2 leading-relaxed text-gray-600">
+        Para que quien pierde la conexión pueda escuchar lo que se perdió, el servidor guarda en memoria el audio de los últimos 30 segundos (y hasta 3 minutos
+        mientras alguien está desconectado). Nunca se graba en disco y se descarta solo.
+      </p>
       <h3 className="mt-6 font-medium text-gray-900">Atajos de teclado</h3>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-gray-600">
         <dt className="font-mono text-xs">Ctrl + D</dt>

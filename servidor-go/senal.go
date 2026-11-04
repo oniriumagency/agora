@@ -46,11 +46,16 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	conn.SetReadLimit(tamanoMaximoMensaje)
-	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(60 * time.Second)) })
-
 	p := &Participante{id: nuevoID(), conn: conn, publicadas: map[string]*Publicada{}}
+	p.ultimaSenal.Store(ahoraMs())
+	conn.SetReadLimit(tamanoMaximoMensaje)
+	// Latido cada 10 s y 25 s de margen: un corte de red se detecta pronto y se le guarda el sitio.
+	_ = conn.SetReadDeadline(time.Now().Add(25 * time.Second))
+	conn.SetPongHandler(func(string) error {
+		p.ultimaSenal.Store(ahoraMs())
+		return conn.SetReadDeadline(time.Now().Add(25 * time.Second))
+	})
+
 	detener := make(chan struct{})
 	defer close(detener)
 	go latido(p, detener)
@@ -67,6 +72,7 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 			adrede = adrede || websocket.IsCloseError(err, websocket.CloseNormalClosure) // 1001 (página oculta o cerrada) no basta: al cerrar la pestaña llega SALIR
 			return
 		}
+		p.ultimaSenal.Store(ahoraMs())
 		if time.Since(inicioVentana) > ventanaTasa {
 			inicioVentana, cuenta = time.Now(), 0
 		}
@@ -89,7 +95,7 @@ func (s *Servidor) atenderSenal(w http.ResponseWriter, r *http.Request) {
 }
 
 func latido(p *Participante, detener <-chan struct{}) {
-	t := time.NewTicker(25 * time.Second)
+	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	for {
 		select {

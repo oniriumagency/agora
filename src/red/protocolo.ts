@@ -87,7 +87,8 @@ export type MensajeCliente =
 
 export type MensajeServidor =
   | { tipo: "SERVIDORES_ICE"; servidores: ServidorIce[] }
-  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number; reanudada?: boolean; anfitrion: string }
+  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number; reanudada?: boolean; anfitrion: string; ausenteDesde?: number }
+  | { tipo: "VOZ"; id: string; autor: string; nombre: string }
   | { tipo: "ANFITRION"; id: string }
   | { tipo: "SILENCIADO"; por: string }
   | { tipo: "EXPULSADO"; por: string }
