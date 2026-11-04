@@ -10,7 +10,8 @@ import path from "node:path";
 const raiz = path.resolve(import.meta.dirname, "..");
 const web = path.join(raiz, "servidor-go", "web");
 const dist = path.join(raiz, "dist");
-const ejecutar = (orden, args, opciones = {}) => execFileSync(orden, args, { stdio: "inherit", shell: process.platform === "win32", ...opciones });
+// En Windows npx es un .cmd y necesita shell; go no, y con shell se partiría "-s -w" en dos argumentos.
+const ejecutar = (orden, args, opciones = {}) => execFileSync(orden, args, { stdio: "inherit", shell: process.platform === "win32" && orden === "npx", ...opciones });
 
 console.log("== Web (next build)");
 ejecutar("npx", ["next", "build"], { cwd: raiz });
