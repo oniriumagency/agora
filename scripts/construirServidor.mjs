@@ -38,7 +38,7 @@ if (objetivos.some((objetivo) => objetivo.GOOS === "linux")) {
   rmSync(paquete, { recursive: true, force: true });
   mkdirSync(paquete);
   cpSync(path.join(dist, "agora-servidor-linux"), path.join(paquete, "agora-servidor-linux"));
-  for (const archivo of ["instalar.sh", "agora.service", "agora.env.example", "LEEME.md"]) {
+  for (const archivo of ["instalar.sh", "actualizar.sh", "permitir-actualizaciones.sh", "agora.service", "agora.env.example", "LEEME.md"]) {
     cpSync(path.join(raiz, "despliegue", "ubuntu", archivo), path.join(paquete, archivo));
   }
   // tar viene con Windows 10+ y con Linux; se ejecuta sin shell para no depender de comillas.

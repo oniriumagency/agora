@@ -31,6 +31,18 @@ legible solo por el servicio.
 
 Para actualizar más adelante, repite lo mismo con el paquete nuevo: conserva la configuración.
 
+### Actualizaciones sin contraseña (opcional, una vez)
+
+```bash
+sudo bash permitir-actualizaciones.sh
+```
+
+Crea el comando `sudo agora-actualizar`, que se puede ejecutar sin contraseña (también por SSH,
+sin que estés delante). Solo cambia el ejecutable por el de `~/agora-ubuntu.tar.gz` y, si la
+versión nueva no arranca, vuelve a la anterior. No da acceso de administrador: el servicio corre
+con el usuario sin privilegios `agora`. Los cambios en `agora.service` siguen necesitando
+`sudo bash instalar.sh`.
+
 ## 3. Publicar el subdominio (una sola vez)
 
 Cloudflare > Zero Trust > Networks > Tunnels > `magne-homelab` > **Public Hostname** > *Add a public hostname*:
