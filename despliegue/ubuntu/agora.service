@@ -10,7 +10,7 @@ User=agora
 Group=agora
 WorkingDirectory=/opt/agora
 # Lee /opt/agora/agora.env (URL pública y TURN de Cloudflare).
-ExecStart=/opt/agora/agora-servidor-linux --sin-tunel --sin-navegador --sin-firewall --puerto-https 0
+ExecStart=/opt/agora/agora-servidor-linux --sin-tunel --sin-navegador --sin-firewall --sin-upnp --puerto-https 0
 Restart=always
 RestartSec=3
 NoNewPrivileges=true

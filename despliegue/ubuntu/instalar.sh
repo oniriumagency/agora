@@ -50,9 +50,13 @@ install -m 644 "$AQUI/agora.service" /etc/systemd/system/agora.service
 systemctl daemon-reload
 systemctl enable --now agora >/dev/null 2>&1
 systemctl restart agora
-sleep 3
-
-if curl -fsS http://localhost:8090/salud >/dev/null; then
+# Al arrancar consulta la IP pública y pide las credenciales TURN: puede tardar unos segundos.
+listo=0
+for _ in $(seq 1 30); do
+  if curl -fsS http://localhost:8090/salud >/dev/null 2>&1; then listo=1; break; fi
+  sleep 1
+done
+if [[ $listo -eq 1 ]]; then
   echo "== Ágora está corriendo en http://localhost:8090"
 else
   echo "!! Ágora no respondió. Mira: journalctl -u agora -n 50" >&2
