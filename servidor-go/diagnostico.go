@@ -2,6 +2,16 @@ package main
 
 import "fmt"
 
+var turnActivo bool
+
+// pistaSinConexion explica en el registro qué hacer cuando alguien no consigue conectar medios.
+func pistaSinConexion() string {
+	if turnActivo {
+		return "Revisa que su red permita salir a Internet por UDP 3478 o TCP 443."
+	}
+	return "Configura el TURN de Cloudflare en kubox-meet.env (necesario con CGNAT) o abre el puerto en el router."
+}
+
 // Diagnóstico de red al arrancar: IP pública, apertura de puertos en el router y CGNAT.
 type EstadoRed struct {
 	ipPublica   string

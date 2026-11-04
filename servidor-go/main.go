@@ -64,6 +64,7 @@ func main() {
 	defer cerrarMedios()
 	servidor := nuevoServidor(config, api)
 	turn := mantenerTurn(servidor, config.turnID, config.turnToken)
+	turnActivo = turn
 	switch {
 	case turn:
 		linea(0, "TURN de Cloudflare", "activo: se puede entrar aunque las redes no permitan conexión directa")

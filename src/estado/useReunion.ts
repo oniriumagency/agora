@@ -24,6 +24,8 @@ interface EstadoReunion {
   entradaEn: number | null;
   maximoVideos: number;
   pagina: number;
+  /** Problema con el audio y el vídeo (la reunión sigue: chat, mano, etc.). */
+  avisoMedios: string | null;
 
   fijar: (estado: Partial<EstadoReunion>) => void;
   fijarLocal: (cambios: Partial<EstadoLocal>) => void;
@@ -73,6 +75,7 @@ export const useReunion = create<EstadoReunion>((set) => ({
   entradaEn: null,
   maximoVideos: 9,
   pagina: 0,
+  avisoMedios: null,
 
   fijar: (estado) => set(estado),
   fijarLocal: (cambios) => set((actual) => ({ local: { ...actual.local, ...cambios } })),

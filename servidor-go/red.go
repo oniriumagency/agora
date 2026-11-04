@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/huin/goupnp"
@@ -21,7 +22,7 @@ func ipsLocales() []string {
 	var ips []string
 	interfaces, _ := net.Interfaces()
 	for _, i := range interfaces {
-		if i.Flags&net.FlagUp == 0 || i.Flags&net.FlagLoopback != 0 {
+		if i.Flags&net.FlagUp == 0 || i.Flags&net.FlagLoopback != 0 || esVirtual(i.Name) {
 			continue
 		}
 		direcciones, _ := i.Addrs()
@@ -32,6 +33,17 @@ func ipsLocales() []string {
 		}
 	}
 	return ips
+}
+
+// esVirtual descarta adaptadores de máquinas virtuales y VPN (VirtualBox, Hyper-V, VMware, WSL…).
+func esVirtual(nombre string) bool {
+	n := strings.ToLower(nombre)
+	for _, marca := range []string{"virtualbox", "vethernet", "vmware", "hyper-v", "wsl", "docker", "vbox", "zerotier", "tailscale", "hamachi"} {
+		if strings.Contains(n, marca) {
+			return true
+		}
+	}
+	return false
 }
 
 // ipPublica pregunta a un servidor STUN con qué IP nos ve Internet.
@@ -86,7 +98,7 @@ func ipLocalHacia(destino string) string {
 
 // abrirPuertos intenta UPnP (IGD v2 y v1) y, si no hay, NAT-PMP.
 func abrirPuertos(puertos []puertoAbrir) (*Mapeo, error) {
-	ctx, cancelar := context.WithTimeout(context.Background(), 6*time.Second)
+	ctx, cancelar := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancelar()
 	if m, err := abrirUPnP(ctx, puertos); err == nil {
 		return m, nil

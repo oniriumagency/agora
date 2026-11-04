@@ -8,6 +8,9 @@ import type { CargaSenal, TipoPista } from "./protocolo";
  * cámara o la pantalla es un replaceTrack, sin renegociar. El mapa de PISTAS dice de quién es cada
  * ranura; con él se reconstruyen los flujos de cada participante.
  */
+/** Si en este tiempo no se llega a conectar, la red no lo permite (Chrome tarda en declarar "failed"). */
+const ESPERA_MAXIMA_CONEXION_MS = 25_000;
+
 export const ORDEN_PISTAS: TipoPista[] = ["audio", "camara", "pantalla"];
 const CLASE: Record<TipoPista, "audio" | "video"> = { audio: "audio", camara: "video", pantalla: "video" };
 
@@ -16,7 +19,8 @@ export type FlujosPorPersona = Record<string, Partial<Record<TipoPista, MediaStr
 export interface EventosSfu {
   enviarSenal: (carga: CargaSenal) => void;
   alCambiarFlujos: (flujos: FlujosPorPersona) => void;
-  alFallar: () => void;
+  /** `nuncaConecto`: la red no permitió llegar al servidor (no es un corte momentáneo). */
+  alFallar: (nuncaConecto: boolean) => void;
 }
 
 export class ConexionSfu {
@@ -26,6 +30,8 @@ export class ConexionSfu {
   private readonly flujosPorMid = new Map<string, MediaStream>();
   private candidatosPendientes: RTCIceCandidateInit[] = [];
   private cerrada = false;
+  private conecto = false;
+  private avisada = false;
 
   constructor(servidoresIce: RTCIceServer[], private readonly eventos: EventosSfu) {
     this.conexion = new RTCPeerConnection({ iceServers: servidoresIce, bundlePolicy: "max-bundle" });
@@ -34,7 +40,11 @@ export class ConexionSfu {
     };
     this.conexion.ontrack = () => this.recalcular();
     this.conexion.onconnectionstatechange = () => {
-      if (this.conexion.connectionState === "failed" && !this.cerrada) this.eventos.alFallar();
+      const estado = this.conexion.connectionState;
+      if (estado === "connected") this.conecto = true;
+      if (estado !== "failed" || this.cerrada) return;
+      if (this.conecto) this.eventos.alFallar(false);
+      else this.fallar();
     };
   }
 
@@ -47,6 +57,13 @@ export class ConexionSfu {
     const oferta = await this.conexion.createOffer();
     await this.conexion.setLocalDescription(oferta);
     this.eventos.enviarSenal({ tipo: "offer", sdp: oferta.sdp ?? "" });
+    setTimeout(() => this.fallar(), ESPERA_MAXIMA_CONEXION_MS);
+  }
+
+  private fallar(): void {
+    if (this.cerrada || this.conecto || this.avisada) return;
+    this.avisada = true;
+    this.eventos.alFallar(true);
   }
 
   async recibirSenal(carga: CargaSenal): Promise<void> {

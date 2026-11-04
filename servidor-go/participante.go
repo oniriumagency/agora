@@ -80,10 +80,22 @@ func (p *Participante) crearConexion(api *webrtc.API, ice []webrtc.ICEServer) er
 		}
 		p.sala.publicar(p, nuevaPublicada(p, ordenPublicacion[indice], remota))
 	})
+	conecto := false
 	pc.OnConnectionStateChange(func(estado webrtc.PeerConnectionState) {
-		if estado == webrtc.PeerConnectionStateFailed {
-			log.Printf("[Medios] Conexión fallida con %s; se cierra para que vuelva a entrar.", p.datos.Nombre)
-			_ = p.conn.Close()
+		switch estado {
+		case webrtc.PeerConnectionStateConnected:
+			if !conecto {
+				log.Printf("[Medios] %s conectado.", p.datos.Nombre)
+			}
+			conecto = true
+		case webrtc.PeerConnectionStateFailed:
+			if conecto {
+				// Corte de red tras haber funcionado: se cierra para que el navegador vuelva a entrar
+				log.Printf("[Medios] Se cortó la conexión con %s; volverá a entrar.", p.datos.Nombre)
+				_ = p.conn.Close()
+				return
+			}
+			log.Printf("[Medios] %s no pudo conectar el audio ni el vídeo: su red no llega al puerto de medios. %s", p.datos.Nombre, pistaSinConexion())
 		}
 	})
 	return nil

@@ -34,7 +34,15 @@ function crearMedios(): ConexionSfu {
       ultimosFlujos = flujos;
       estado().ponerFlujos(flujos);
     },
-    alFallar: () => cliente?.reiniciar(),
+    alFallar: (nuncaConecto) => {
+      if (!nuncaConecto) return cliente?.reiniciar();
+      // Volver a entrar no lo arreglaría: se avisa y se sigue en la reunión sin medios
+      medios?.cerrar();
+      estado().fijar({
+        avisoMedios:
+          "No se pudo conectar el audio y el vídeo con el servidor de la reunión. Tu red no llega a su puerto de vídeo: quien organiza debe abrir el puerto en su router o configurar TURN.",
+      });
+    },
   });
   void conexion.iniciar(pistasLocales()).catch((error) => console.error("[Sesión] No se pudo iniciar la conexión de medios", error));
   return conexion;
@@ -62,6 +70,7 @@ function alRecibir(mensaje: MensajeServidor): void {
     case "BIENVENIDA":
       reintentos = 0;
       medios?.cerrar();
+      s.fijar({ avisoMedios: null });
       ultimosFlujos = {};
       ultimaSuscripcion = "";
       s.ponerParticipantes(mensaje.participantes);
@@ -156,6 +165,12 @@ function cerrarTodo(): void {
   medios = null;
   soltarMedios();
   estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, panel: null, entradaEn: null });
+}
+
+/** Reintenta el audio y el vídeo volviendo a entrar en la reunión. */
+export function reintentarMedios(): void {
+  estado().fijar({ avisoMedios: null });
+  cliente?.reiniciar();
 }
 
 /** Colgar: se cierra todo y se muestra la pantalla final. */
