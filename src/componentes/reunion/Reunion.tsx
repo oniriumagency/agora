@@ -2,6 +2,7 @@
 import { irAlDirecto, reintentarMedios } from "@/estado/sesion";
 import { useReunion } from "@/estado/useReunion";
 import { AudiosRemotos } from "./AudiosRemotos";
+import { ModoBolsillo } from "./ModoBolsillo";
 import { Avisos } from "./Avisos";
 import { BarraControles } from "./BarraControles";
 import { Escenario } from "./Escenario";
@@ -55,6 +56,7 @@ export function Reunion() {
       </div>
       <BarraControles />
       <AudiosRemotos />
+      <ModoBolsillo />
       <TarjetaInvitar />
       <ReaccionesFlotantes />
       <Avisos />
