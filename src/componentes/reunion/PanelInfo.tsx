@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useReunion } from "@/estado/useReunion";
+import { ESPERAS_BOLSILLO, esIPhone, esperaBolsillo, fijarEsperaBolsillo } from "./ModoBolsillo";
 import { fijarSonidos, prepararSonidos, sonarEntrada, sonidosActivados } from "@/medios/sonidos";
 import { BotonCopiarEnlace } from "./BotonCopiarEnlace";
 
@@ -8,6 +9,8 @@ import { BotonCopiarEnlace } from "./BotonCopiarEnlace";
 export function PanelInfo() {
   const sala = useReunion((estado) => estado.sala);
   const [sonidos, setSonidos] = useState(sonidosActivados);
+  const [espera, setEspera] = useState(esperaBolsillo);
+  const iphone = typeof window !== "undefined" && esIPhone();
   return (
     <div className="flex-1 overflow-y-auto px-6 pb-6 text-sm text-gray-700">
       <h3 className="font-medium text-gray-900">Información para unirse</h3>
@@ -36,6 +39,29 @@ export function PanelInfo() {
           className="h-5 w-5 accent-acento-fuerte"
         />
       </label>
+      {iphone && (
+        <label className="mt-5 flex items-center justify-between gap-4">
+          <span>
+            <span className="block font-medium text-gray-900">Pantalla en negro (solo audio)</span>
+            <span className="text-gray-600">El iPhone no puede bloquearse sin cortar la llamada: la pantalla se pone en negro tras</span>
+          </span>
+          <select
+            value={espera}
+            onChange={(evento) => {
+              const segundos = Number(evento.target.value);
+              fijarEsperaBolsillo(segundos);
+              setEspera(segundos);
+            }}
+            className="rounded-md border border-gray-300 bg-white px-2 py-1"
+          >
+            {ESPERAS_BOLSILLO.map((s) => (
+              <option key={s} value={s}>
+                {s < 60 ? `${s} s` : `${s / 60} min`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <hr className="my-6 border-gray-200" />
       <h3 className="font-medium text-gray-900">Cómo viaja tu vídeo</h3>
       <p className="mt-1 leading-relaxed text-gray-600">

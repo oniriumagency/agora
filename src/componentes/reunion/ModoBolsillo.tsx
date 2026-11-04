@@ -1,15 +1,44 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useReunion } from "@/estado/useReunion";
+import { quererPantallaEncendida } from "@/medios/pantallaEncendida";
 
 /**
- * Modo bolsillo (solo celular). Una página web no puede apagar la pantalla sin que el teléfono se
- * bloquee, y al bloquearse iPhone corta el audio. Así que la pantalla se mantiene encendida (Wake
- * Lock) y, si la llamada es solo de audio, tras unos segundos sin tocarla se cubre de negro puro:
- * en pantallas OLED eso es prácticamente apagada, y el audio sigue en los dos sentidos.
- * Un toque la despierta. Si alguien comparte pantalla o tiene la cámara encendida, no se oscurece.
+ * Pantalla del celular en llamadas solo de audio (nadie con cámara ni compartiendo pantalla):
+ * - Android: no se fuerza nada. El teléfono se apaga y bloquea con el tiempo que tenga configurado
+ *   y el audio sigue en los dos sentidos (Chrome mantiene viva la llamada).
+ * - iPhone: al bloquearse, iOS corta el audio de las páginas web. Por eso la pantalla se mantiene
+ *   encendida y, pasado el tiempo elegido sin tocarla, se cubre de negro puro (en OLED es
+ *   prácticamente apagada). Ninguna web puede leer el tiempo de bloqueo del sistema, así que se
+ *   elige en el panel de información (30 s por defecto). Un toque la despierta.
+ * Con vídeo en pantalla, la pantalla siempre queda encendida.
  */
-const ESPERA_MS = 20_000;
+const CLAVE_ESPERA = "agora.bolsillo";
+export const ESPERAS_BOLSILLO = [10, 30, 60, 120, 300];
+
+export function esperaBolsillo(): number {
+  try {
+    const guardada = Number(localStorage.getItem(CLAVE_ESPERA));
+    return ESPERAS_BOLSILLO.includes(guardada) ? guardada : 30;
+  } catch {
+    return 30;
+  }
+}
+
+export function fijarEsperaBolsillo(segundos: number): void {
+  try {
+    localStorage.setItem(CLAVE_ESPERA, String(segundos));
+  } catch {
+    /* solo esta sesión */
+  }
+  window.dispatchEvent(new Event("agora-bolsillo"));
+}
+
+export function esIPhone(): boolean {
+  if (typeof navigator === "undefined") return false;
+  // iPadOS se presenta como Mac: se distingue por la pantalla táctil
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1);
+}
 
 export function ModoBolsillo() {
   const hayVideo = useReunion(
@@ -18,21 +47,35 @@ export function ModoBolsillo() {
       estado.local.pantalla ||
       Object.values(estado.participantes).some((p) => !p.estado.ausente && (p.estado.camara || p.estado.pantalla)),
   );
-  const [esCelular, setEsCelular] = useState(false);
+  const [plataforma, setPlataforma] = useState<"escritorio" | "android" | "iphone">("escritorio");
+  const [espera, setEspera] = useState(30);
   const [oscura, setOscura] = useState(false);
 
-  useEffect(() => setEsCelular(window.matchMedia("(pointer: coarse)").matches), []);
+  useEffect(() => {
+    const tactil = window.matchMedia("(pointer: coarse)").matches;
+    setPlataforma(esIPhone() ? "iphone" : tactil ? "android" : "escritorio");
+    setEspera(esperaBolsillo());
+    const alCambiar = () => setEspera(esperaBolsillo());
+    window.addEventListener("agora-bolsillo", alCambiar);
+    return () => window.removeEventListener("agora-bolsillo", alCambiar);
+  }, []);
+
+  // Android en audio: que el sistema apague y bloquee como siempre
+  useEffect(() => {
+    quererPantallaEncendida(!(plataforma === "android" && !hayVideo));
+    return () => quererPantallaEncendida(true);
+  }, [plataforma, hayVideo]);
 
   useEffect(() => {
-    if (!esCelular || hayVideo) {
-      setOscura(false); // con vídeo en pantalla, nunca se oscurece
+    if (plataforma !== "iphone" || hayVideo) {
+      setOscura(false);
       return;
     }
     if (oscura) return; // ya en negro: espera un toque
-    let temporizador = setTimeout(() => setOscura(true), ESPERA_MS);
+    let temporizador = setTimeout(() => setOscura(true), espera * 1000);
     const actividad = () => {
       clearTimeout(temporizador);
-      temporizador = setTimeout(() => setOscura(true), ESPERA_MS);
+      temporizador = setTimeout(() => setOscura(true), espera * 1000);
     };
     const eventos = ["pointerdown", "touchstart", "keydown"] as const;
     eventos.forEach((evento) => window.addEventListener(evento, actividad, { passive: true }));
@@ -40,7 +83,7 @@ export function ModoBolsillo() {
       clearTimeout(temporizador);
       eventos.forEach((evento) => window.removeEventListener(evento, actividad));
     };
-  }, [esCelular, hayVideo, oscura]);
+  }, [plataforma, hayVideo, oscura, espera]);
 
   if (!oscura) return null;
   return (
