@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import type { EstadoParticipante, MensajeChat, Participante, Reaccion } from "@/red/protocolo";
-import type { TipoPista } from "@/red/MallaWebRtc";
+import type { FlujosPorPersona } from "@/red/ConexionSfu";
 import type { Aviso, Destacado, EstadoLocal, Fase, Panel, ParticipanteRemoto, ReaccionVisible } from "./tipos";
 
 /**
  * Estado de la reunión que pinta la interfaz. Lo modifican la sesión (mensajes del servidor y de
- * la malla) y los controles locales; los componentes solo leen y llaman a acciones de la sesión.
+ * la conexión de medios) y los controles locales; los componentes solo leen y llaman a acciones de la sesión.
  */
 interface EstadoReunion {
   fase: Fase;
@@ -22,6 +22,8 @@ interface EstadoReunion {
   avisos: Aviso[];
   reacciones: ReaccionVisible[];
   entradaEn: number | null;
+  maximoVideos: number;
+  pagina: number;
 
   fijar: (estado: Partial<EstadoReunion>) => void;
   fijarLocal: (cambios: Partial<EstadoLocal>) => void;
@@ -31,8 +33,7 @@ interface EstadoReunion {
   agregarParticipante: (participante: Participante) => void;
   quitarParticipante: (id: string) => void;
   actualizarEstado: (id: string, estado: EstadoParticipante) => void;
-  ponerFlujo: (id: string, tipo: TipoPista, flujo: MediaStream) => void;
-  ponerConexion: (id: string, estado: RTCPeerConnectionState) => void;
+  ponerFlujos: (flujos: FlujosPorPersona) => void;
   agregarChat: (mensaje: MensajeChat) => void;
   avisar: (texto: string, icono?: string) => void;
   mostrarReaccion: (emoji: Reaccion, nombre: string) => void;
@@ -53,7 +54,7 @@ let contadorAvisos = 0;
 const DURACION_AVISO_MS = 4500;
 const DURACION_REACCION_MS = 4000;
 
-const remoto = (participante: Participante): ParticipanteRemoto => ({ ...participante, flujos: {}, conexion: "new" });
+const remoto = (participante: Participante): ParticipanteRemoto => ({ ...participante, flujos: {} });
 
 export const useReunion = create<EstadoReunion>((set) => ({
   fase: "previa",
@@ -70,6 +71,8 @@ export const useReunion = create<EstadoReunion>((set) => ({
   avisos: [],
   reacciones: [],
   entradaEn: null,
+  maximoVideos: 9,
+  pagina: 0,
 
   fijar: (estado) => set(estado),
   fijarLocal: (cambios) => set((actual) => ({ local: { ...actual.local, ...cambios } })),
@@ -92,16 +95,11 @@ export const useReunion = create<EstadoReunion>((set) => ({
       const fijado = actual.fijado?.id === id && actual.fijado.pantalla && !estado.pantalla ? null : actual.fijado;
       return { participantes: { ...actual.participantes, [id]: { ...participante, estado } }, fijado };
     }),
-  ponerFlujo: (id, tipo, flujo) =>
+  ponerFlujos: (flujos) =>
     set((actual) => {
-      const participante = actual.participantes[id];
-      if (!participante) return {};
-      return { participantes: { ...actual.participantes, [id]: { ...participante, flujos: { ...participante.flujos, [tipo]: flujo } } } };
-    }),
-  ponerConexion: (id, conexion) =>
-    set((actual) => {
-      const participante = actual.participantes[id];
-      return participante ? { participantes: { ...actual.participantes, [id]: { ...participante, conexion } } } : {};
+      const participantes: Record<string, ParticipanteRemoto> = {};
+      for (const [id, participante] of Object.entries(actual.participantes)) participantes[id] = { ...participante, flujos: flujos[id] ?? {} };
+      return { participantes };
     }),
   agregarChat: (mensaje) =>
     set((actual) => ({

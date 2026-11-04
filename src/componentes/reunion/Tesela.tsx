@@ -15,7 +15,6 @@ export function Tesela({ datos, tamAvatar = 88 }: { datos: DatosTesela; tamAvata
   const alternarFijado = useReunion((estado) => estado.alternarFijado);
   const estaFijada = fijado?.id === datos.id && fijado.pantalla === datos.pantalla;
   const etiqueta = datos.pantalla ? `Presentación de ${datos.esLocal ? "ti" : datos.nombre}` : datos.esLocal ? `${datos.nombre} (Tú)` : datos.nombre;
-  const conectando = !datos.esLocal && datos.conexion !== "connected";
 
   return (
     <div
@@ -54,11 +53,6 @@ export function Tesela({ datos, tamAvatar = 88 }: { datos: DatosTesela; tamAvata
           ) : (
             hablando && <OndasVoz activo />
           )}
-        </span>
-      )}
-      {conectando && (
-        <span className="absolute inset-x-0 top-1/2 mt-12 text-center text-xs text-sala-tenue">
-          {datos.conexion === "failed" || datos.conexion === "disconnected" ? "Problemas de conexión…" : "Conectando…"}
         </span>
       )}
       <span className="absolute bottom-2 left-3 max-w-[75%] truncate text-sm font-medium text-white [text-shadow:0_1px_2px_rgba(0,0,0,.8)]">{etiqueta}</span>

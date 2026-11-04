@@ -1,9 +1,9 @@
 // Prueba de extremo a extremo con dos navegadores Chromium y cámara/micrófono simulados.
-// Requiere el servidor (npm run servidor) y la web en marcha, y Playwright instalado (npx playwright install chromium).
-//   node pruebas/e2e.cjs [http://localhost:3100] [carpeta-capturas]
+// Requiere el servidor en marcha (npm run dev o el .exe; por defecto http://localhost:8090), y Playwright instalado (npx playwright install chromium).
+//   node pruebas/e2e.cjs [http://localhost:8090] [carpeta-capturas]
 const { chromium } = require("playwright");
 
-const BASE = process.argv[2] ?? "http://localhost:3100";
+const BASE = process.argv[2] ?? "http://localhost:8090";
 const CAPTURAS = process.argv[3] ?? null;
 const SALA = `prueba-${Math.random().toString(36).slice(2, 8)}`;
 

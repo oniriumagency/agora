@@ -1,13 +1,12 @@
 import { abrirCamara, abrirMicrofono, abrirPantalla, describirErrorMedios, flujoDe } from "@/medios/mediosLocales";
-import type { TipoPista } from "@/red/MallaWebRtc";
-import type { Reaccion } from "@/red/protocolo";
-import { enviarAlServidor, mallaActual } from "./sesion";
+import type { Reaccion, TipoPista } from "@/red/protocolo";
+import { conexionActual, enviarAlServidor } from "./sesion";
 import { useReunion } from "./useReunion";
 
 /**
  * Controles del propio participante: micrófono, cámara, pantalla, mano, chat y reacciones. Las
- * pistas viven aquí; la malla recibe cada cambio con replaceTrack y el servidor el nuevo estado.
- * Funcionan igual en la sala de espera (sin malla ni servidor) que dentro de la reunión.
+ * pistas viven aquí; la conexión con el servidor recibe cada cambio con replaceTrack y el servidor el nuevo estado.
+ * Funcionan igual en la sala de espera (sin conexión) que dentro de la reunión.
  */
 const pistas: Record<TipoPista, MediaStreamTrack | null> = { audio: null, camara: null, pantalla: null };
 const dispositivos: { microfonoId?: string; camaraId?: string } = {};
@@ -21,7 +20,7 @@ export function pistasLocales(): Readonly<Record<TipoPista, MediaStreamTrack | n
 function fijarPista(tipo: TipoPista, pista: MediaStreamTrack | null): void {
   if (pistas[tipo] && pistas[tipo] !== pista) pistas[tipo]?.stop();
   pistas[tipo] = pista;
-  void mallaActual()?.fijarPista(tipo, pista);
+  void conexionActual()?.fijarPista(tipo, pista);
   if (tipo === "audio") estado().fijarLocal({ pistaMicro: pista, flujoMicro: flujoDe(pista) });
   if (tipo === "camara") estado().fijarLocal({ flujoCamara: flujoDe(pista) });
   if (tipo === "pantalla") estado().fijarLocal({ flujoPantalla: flujoDe(pista) });

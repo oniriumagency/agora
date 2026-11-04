@@ -1,20 +1,22 @@
 import { ClienteSenal } from "@/red/ClienteSenal";
-import { MallaWebRtc } from "@/red/MallaWebRtc";
+import { ConexionSfu, type FlujosPorPersona } from "@/red/ConexionSfu";
 import type { MensajeServidor, ServidorIce } from "@/red/protocolo";
 import { componerServidoresIce } from "@/red/servidoresIce";
 import { useReunion, LOCAL_INICIAL } from "./useReunion";
 import { pistasLocales, soltarMedios } from "./controlesLocales";
 
 /**
- * Ciclo de vida de una reunión: conectar al servidor, unirse, crear la malla WebRTC y traducir
- * los mensajes del servidor al estado de la interfaz. Si la conexión con el servidor se cae se
- * reintenta unirse, rehaciendo la malla (los demás verán que salimos y volvimos a entrar).
+ * Ciclo de vida de una reunión: conectar al servidor, unirse, abrir la conexión WebRTC con el SFU
+ * y traducir los mensajes del servidor al estado de la interfaz. Si se cae la señalización o los
+ * medios, se vuelve a entrar (los demás verán que salimos y volvimos).
  */
 const REINTENTOS_MAXIMOS = 8;
 const ESPERA_SERVIDORES_ICE_MS = 2500;
 
 let cliente: ClienteSenal | null = null;
-let malla: MallaWebRtc | null = null;
+let medios: ConexionSfu | null = null;
+let ultimosFlujos: FlujosPorPersona = {};
+let ultimaSuscripcion = "";
 let servidoresIce: ServidorIce[] | null = null;
 let alLlegarIce: (() => void) | null = null;
 let reintentos = 0;
@@ -22,18 +24,32 @@ let reintentos = 0;
 const estado = () => useReunion.getState();
 
 export const enviarAlServidor = (...argumentos: Parameters<ClienteSenal["enviar"]>): void => cliente?.enviar(...argumentos);
-export const mallaActual = (): MallaWebRtc | null => malla;
+export const conexionActual = (): ConexionSfu | null => medios;
 const nombreDe = (id: string): string => estado().participantes[id]?.nombre ?? "Alguien";
 
-function crearMalla(): MallaWebRtc {
-  const nueva = new MallaWebRtc(componerServidoresIce(servidoresIce ?? []), {
-    enviarSenal: (destino, carga) => cliente?.enviar({ tipo: "SENAL", destino, carga }),
-    alRecibirPista: (id, tipo, flujo) => estado().ponerFlujo(id, tipo, flujo),
-    alCambiarConexion: (id, conexion) => estado().ponerConexion(id, conexion),
+function crearMedios(): ConexionSfu {
+  const conexion = new ConexionSfu(componerServidoresIce(servidoresIce ?? []), {
+    enviarSenal: (carga) => cliente?.enviar({ tipo: "SENAL", carga }),
+    alCambiarFlujos: (flujos) => {
+      ultimosFlujos = flujos;
+      estado().ponerFlujos(flujos);
+    },
+    alFallar: () => cliente?.reiniciar(),
   });
-  const pistas = pistasLocales();
-  for (const tipo of ["audio", "camara", "pantalla"] as const) void nueva.fijarPista(tipo, pistas[tipo]);
-  return nueva;
+  void conexion.iniciar(pistasLocales()).catch((error) => console.error("[Sesión] No se pudo iniciar la conexión de medios", error));
+  return conexion;
+}
+
+/** Pide al servidor el vídeo de las personas que se ven en pantalla (lo demás no se descarga). */
+export function suscribir(ids: string[]): void {
+  const firma = ids.join(",");
+  if (firma === ultimaSuscripcion) return;
+  ultimaSuscripcion = firma;
+  cliente?.enviar({ tipo: "SUSCRIBIR", videos: ids });
+}
+
+function ajustarCalidad(): void {
+  void medios?.ajustarCalidad(Object.keys(estado().participantes).length + 1);
 }
 
 function alRecibir(mensaje: MensajeServidor): void {
@@ -45,20 +61,24 @@ function alRecibir(mensaje: MensajeServidor): void {
       return;
     case "BIENVENIDA":
       reintentos = 0;
-      malla?.cerrarTodo();
-      malla = crearMalla();
+      medios?.cerrar();
+      ultimosFlujos = {};
+      ultimaSuscripcion = "";
       s.ponerParticipantes(mensaje.participantes);
-      s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now() });
-      for (const participante of mensaje.participantes) void malla.ofrecerA(participante.id);
+      s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9 });
+      medios = crearMedios();
+      ajustarCalidad();
       return;
     case "ENTRO":
       s.agregarParticipante(mensaje.participante);
+      s.ponerFlujos(ultimosFlujos);
+      ajustarCalidad();
       s.avisar(`${mensaje.participante.nombre} se unió`, "👋");
       return;
     case "SALIO":
       if (s.participantes[mensaje.id]) s.avisar(`${nombreDe(mensaje.id)} salió de la reunión`);
-      malla?.cerrarPar(mensaje.id);
       s.quitarParticipante(mensaje.id);
+      ajustarCalidad();
       return;
     case "ESTADO": {
       const anterior = s.participantes[mensaje.id]?.estado;
@@ -76,7 +96,10 @@ function alRecibir(mensaje: MensajeServidor): void {
       s.mostrarReaccion(mensaje.emoji, mensaje.id === s.miId ? "Tú" : nombreDe(mensaje.id));
       return;
     case "SENAL":
-      void malla?.recibirSenal(mensaje.origen, mensaje.carga).catch((error) => console.warn("[Sesión] Señal", error));
+      void medios?.recibirSenal(mensaje.carga).catch((error) => console.warn("[Sesión] Señal", error));
+      return;
+    case "PISTAS":
+      medios?.fijarMapa(mensaje.mapa);
       return;
     case "ERROR":
       if (mensaje.codigo === "SALA_LLENA" || mensaje.codigo === "LIMITE_SALAS") {
@@ -97,7 +120,8 @@ function esperarServidoresIce(): Promise<void> {
 function alCerrar(inesperado: boolean): void {
   const s = estado();
   if (!inesperado || (s.fase !== "reunion" && s.fase !== "reconectando")) return;
-  malla?.cerrarTodo();
+  medios?.cerrar();
+  medios = null;
   s.fijar({ fase: "reconectando", participantes: {} });
   if (++reintentos > REINTENTOS_MAXIMOS) {
     s.fijar({ fase: "error", error: "Se perdió la conexión con el servidor de la reunión." });
@@ -128,8 +152,8 @@ export async function entrar(sala: string, nombre: string): Promise<void> {
 function cerrarTodo(): void {
   cliente?.cerrar();
   cliente = null;
-  malla?.cerrarTodo();
-  malla = null;
+  medios?.cerrar();
+  medios = null;
   soltarMedios();
   estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, panel: null, entradaEn: null });
 }

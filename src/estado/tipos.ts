@@ -1,12 +1,11 @@
 import type { MensajeChat, Participante, Reaccion } from "@/red/protocolo";
-import type { TipoPista } from "@/red/MallaWebRtc";
+import type { TipoPista } from "@/red/protocolo";
 
 export type Fase = "previa" | "conectando" | "reunion" | "reconectando" | "fuera" | "error";
 export type Panel = "chat" | "personas" | "info" | null;
 
 export interface ParticipanteRemoto extends Participante {
   flujos: Partial<Record<TipoPista, MediaStream>>;
-  conexion: RTCPeerConnectionState;
 }
 
 export interface EstadoLocal {

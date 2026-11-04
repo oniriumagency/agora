@@ -39,6 +39,11 @@ export class ClienteSenal {
     if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(mensaje));
   }
 
+  /** Cierra como si se hubiera caído, para que la sesión vuelva a entrar. */
+  reiniciar(): void {
+    this.socket?.close(4000);
+  }
+
   cerrar(): void {
     this.cerradoAProposito = true;
     this.socket?.close(1000);

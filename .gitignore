@@ -7,3 +7,6 @@ next-env.d.ts.bak
 .env*.local
 npm-debug.log*
 pruebas/capturas/
+dist/
+servidor-go/web/*
+!servidor-go/web/LEEME.txt

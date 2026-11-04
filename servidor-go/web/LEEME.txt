@@ -1,0 +1,1 @@
+Aquí se copia la web compilada (npm run exe). No se versiona.
