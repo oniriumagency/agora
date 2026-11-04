@@ -61,6 +61,15 @@ async function videoVivo(pagina, textoEtiqueta) {
     await beto.getByRole("log").getByText("Hola, ¿me escuchan?").waitFor();
     comprobar(true, "Beto recibe el mensaje de chat");
 
+    // PNG de 1×1 para comprobar la subida, la vista previa y la descarga
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+    await ana.locator('input[type="file"]').setInputFiles({ name: "captura.png", mimeType: "image/png", buffer: png });
+    const tarjeta = beto.getByRole("log").getByLabel("Descargar captura.png");
+    await tarjeta.waitFor();
+    await beto.waitForFunction(() => [...document.querySelectorAll('[role="log"] img')].some((img) => img.complete && img.naturalWidth === 1));
+    const descarga = await beto.request.get(await tarjeta.getAttribute("href"));
+    comprobar(Buffer.compare(await descarga.body(), png) === 0 && /attachment/.test(descarga.headers()["content-disposition"]), "Beto recibe el archivo adjunto de Ana, con vista previa y descarga");
+
     await beto.getByLabel("Enviar una reacción").click();
     await beto.getByLabel("Reaccionar con 🎉").click();
     await ana.locator(".animate-subir", { hasText: "🎉" }).first().waitFor({ state: "attached" });
@@ -68,6 +77,17 @@ async function videoVivo(pagina, textoEtiqueta) {
 
     await ana.getByLabel("Presentar pantalla").click();
     comprobar(await videoVivo(beto, "Presentación de Ana"), "Beto ve la pantalla que presenta Ana");
+
+    await beto.locator("[data-tesela]", { hasText: "Beto" }).first().click();
+    await beto.getByRole("button", { name: /Ver a todos/ }).waitFor();
+    comprobar((await beto.locator("[data-tesela]").count()) === 1, "Al tocar una tesela solo se ve esa persona");
+    await beto.getByRole("button", { name: /Ver a todos/ }).click();
+    await beto.locator('[data-tesela$=":pantalla"]').first().click();
+    await beto.getByLabel(/en pantalla completa/).click();
+    const completa = await beto.waitForFunction(() => document.fullscreenElement?.matches("[data-tesela$=':pantalla']"), null, { timeout: 5000 }).then(() => true, () => false);
+    comprobar(completa, "La presentación se pone en pantalla completa");
+    await beto.getByLabel("Salir de pantalla completa").click();
+    await beto.getByRole("button", { name: /Ver a todos/ }).click();
 
     if (CAPTURAS) {
       await beto.waitForTimeout(800);

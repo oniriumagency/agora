@@ -19,11 +19,12 @@ type DatosParticipante struct {
 }
 
 type MensajeChat struct {
-	ID          string `json:"id"`
-	AutorID     string `json:"autorId"`
-	AutorNombre string `json:"autorNombre"`
-	Texto       string `json:"texto"`
-	EnviadoEn   int64  `json:"enviadoEn"`
+	ID          string       `json:"id"`
+	AutorID     string       `json:"autorId"`
+	AutorNombre string       `json:"autorNombre"`
+	Texto       string       `json:"texto"`
+	EnviadoEn   int64        `json:"enviadoEn"`
+	Archivo     *ArchivoChat `json:"archivo,omitempty"`
 }
 
 // CargaSenal es una descripción SDP ({tipo, sdp}) o un candidato ICE.
@@ -50,10 +51,10 @@ type Pista struct {
 
 // MensajeEntrante agrupa todos los campos posibles de un mensaje del cliente.
 type MensajeEntrante struct {
-	Tipo    string          `json:"tipo"`
-	Sala    string          `json:"sala"`
-	Nombre  string          `json:"nombre"`
-	Estado  *struct {
+	Tipo   string `json:"tipo"`
+	Sala   string `json:"sala"`
+	Nombre string `json:"nombre"`
+	Estado *struct {
 		Microfono bool `json:"microfono"`
 		Camara    bool `json:"camara"`
 	} `json:"estado"`

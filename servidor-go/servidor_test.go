@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -67,7 +69,7 @@ func TestSalaChatYEstado(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer cerrar()
-	s := nuevoServidor(Config{maximoPorSala: 2, maximoVideos: 9, maximoSalas: 5, maximoConexiones: 10}, api)
+	s := nuevoServidor(Config{carpetaDatos: t.TempDir(), maximoArchivoMB: 1, maximoPorSala: 2, maximoVideos: 9, maximoSalas: 5, maximoConexiones: 10}, api)
 	s.fijarIce(nil)
 	prueba := httptest.NewServer(s.rutas(manejadorWeb()))
 	defer prueba.Close()
@@ -82,7 +84,7 @@ func TestSalaChatYEstado(t *testing.T) {
 		return c
 	}
 	ana := conectar("Ana")
-	ana.esperar("BIENVENIDA")
+	claveAna := ana.esperar("BIENVENIDA")["clave"].(string)
 	beto := conectar("Beto")
 	bienvenida := beto.esperar("BIENVENIDA")
 	if lista, _ := json.Marshal(bienvenida["participantes"]); !strings.Contains(string(lista), "Ana") {
@@ -96,6 +98,39 @@ func TestSalaChatYEstado(t *testing.T) {
 	ana.enviar(M{"tipo": "CHAT", "texto": "  hola  "})
 	if texto := beto.esperar("CHAT")["mensaje"].(map[string]any)["texto"]; texto != "hola" {
 		t.Fatalf("chat = %v", texto)
+	}
+	// Archivos: sin clave se rechaza; con clave llega al chat y se descarga como adjunto.
+	subir := func(clave string, cuerpo string) int {
+		pedido, _ := http.NewRequest("POST", prueba.URL+"/archivos?nombre=..%2Fnotas.txt", strings.NewReader(cuerpo))
+		pedido.Header.Set("X-Clave", clave)
+		r, err := http.DefaultClient.Do(pedido)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Body.Close()
+		return r.StatusCode
+	}
+	if codigo := subir("inventada", "x"); codigo != http.StatusForbidden {
+		t.Fatalf("subida sin clave = %d", codigo)
+	}
+	if codigo := subir(claveAna, strings.Repeat("x", 2<<20)); codigo != http.StatusRequestEntityTooLarge {
+		t.Fatalf("subida enorme = %d", codigo)
+	}
+	if codigo := subir(claveAna, "<script>hola</script>"); codigo != http.StatusCreated {
+		t.Fatalf("subida = %d", codigo)
+	}
+	archivo := beto.esperar("CHAT")["mensaje"].(map[string]any)["archivo"].(map[string]any)
+	if archivo["nombre"] != "notas.txt" || archivo["tamano"].(float64) != 21 {
+		t.Fatalf("archivo = %v", archivo)
+	}
+	r, err := http.Get(prueba.URL + "/archivos/" + archivo["id"].(string) + "?ver=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	contenido, _ := io.ReadAll(r.Body)
+	r.Body.Close()
+	if string(contenido) != "<script>hola</script>" || !strings.HasPrefix(r.Header.Get("Content-Disposition"), "attachment") || r.Header.Get("Content-Type") != "application/octet-stream" {
+		t.Fatalf("descarga insegura: %s %v", contenido, r.Header)
 	}
 	carla := conectar("Carla")
 	if codigo := carla.esperar("ERROR")["codigo"]; codigo != "SALA_LLENA" {

@@ -125,7 +125,7 @@ func (s *Servidor) despachar(p *Participante, m *MensajeEntrante) {
 			errorA(p, "MENSAJE_INVALIDO", "Mensaje vacío o demasiado largo.")
 			return
 		}
-		sala.difundir(M{"tipo": "CHAT", "mensaje": sala.agregarChat(p, texto)}, "")
+		sala.difundir(M{"tipo": "CHAT", "mensaje": sala.agregarChat(p, texto, nil)}, "")
 	case "REACCION":
 		if !reacciones[m.Emoji] {
 			errorA(p, "MENSAJE_INVALIDO", "Reacción no admitida.")

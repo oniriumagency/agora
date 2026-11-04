@@ -20,7 +20,7 @@ type EstadoRed struct {
 	ipsAnunciar []string
 }
 
-func diagnosticarRed(config Config) EstadoRed {
+func diagnosticarRed(config Config, conTurn bool) EstadoRed {
 	estado := EstadoRed{}
 	ip, err := ipPublica()
 	if err != nil {
@@ -34,6 +34,9 @@ func diagnosticarRed(config Config) EstadoRed {
 		puertos = append(puertos, puertoAbrir{config.puertoHTTPS, "TCP"})
 	}
 	manual := fmt.Sprintf("ábrelos a mano en el router hacia este equipo: %d UDP y TCP (vídeo)", config.puertoMedios)
+	if conTurn {
+		manual = fmt.Sprintf("no pasa nada: con TURN activo el vídeo pasa por Cloudflare. Abrir %d UDP/TCP en el router solo ahorraría ese rodeo", config.puertoMedios)
+	}
 	if config.sinUPnP {
 		linea(1, "Router", "apertura automática desactivada; "+manual)
 		return estado
@@ -41,7 +44,11 @@ func diagnosticarRed(config Config) EstadoRed {
 	fmt.Println("  … Intentando abrir los puertos en el router (UPnP)")
 	mapeo, err := abrirPuertos(puertos)
 	if err != nil {
-		linea(1, "Router", fmt.Sprintf("no se pudieron abrir solos (%v); %s", err, manual))
+		if conTurn {
+			linea(0, "Router", "no se pudieron abrir puertos automáticamente; "+manual)
+		} else {
+			linea(1, "Router", fmt.Sprintf("no se pudieron abrir solos (%v); %s", err, manual))
+		}
 		return estado
 	}
 	estado.mapeo = mapeo

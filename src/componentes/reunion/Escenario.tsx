@@ -21,6 +21,8 @@ export function Escenario() {
   const maximoVideos = useReunion((estado) => estado.maximoVideos);
   const paginaPedida = useReunion((estado) => estado.pagina);
   const fijar = useReunion((estado) => estado.fijar);
+  const enfocado = useReunion((estado) => estado.enfocado);
+  const verTodos = useReunion((estado) => estado.verTodos);
 
   const destacada =
     (fijado && teselas.find((tesela) => tesela.id === fijado.id && tesela.pantalla === fijado.pantalla)) ||
@@ -28,13 +30,17 @@ export function Escenario() {
     teselas.find((tesela) => tesela.pantalla) ||
     null;
   const enModoDestacado = destacada !== null && teselas.length > 1;
+  // "Solo esta persona": se tocó una tesela y sigue existiendo.
+  const soloUna = enfocado && destacada !== null && fijado !== null && destacada.id === fijado.id && destacada.pantalla === fijado.pantalla;
 
   const [propia, ...otras] = teselas;
   const porPagina = Math.max(1, Math.min(maximoVideos, MAXIMO_POR_PAGINA));
   const paginas = Math.max(1, Math.ceil(otras.length / porPagina));
   const pagina = Math.min(paginaPedida, paginas - 1);
   const resto = enModoDestacado ? teselas.filter((tesela) => tesela !== destacada) : [];
-  const visibles: DatosTesela[] = enModoDestacado
+  const visibles: DatosTesela[] = soloUna
+    ? [destacada]
+    : enModoDestacado
     ? [destacada, ...resto.slice(0, MAXIMO_EN_TIRA)]
     : [propia, ...otras.slice(pagina * porPagina, (pagina + 1) * porPagina)];
 
@@ -43,6 +49,20 @@ export function Escenario() {
   useEffect(() => {
     suscribir(firma ? firma.split(",") : []);
   }, [firma]);
+
+  if (soloUna) {
+    return (
+      <div className="relative h-full w-full">
+        <Tesela datos={destacada} tamAvatar={160} />
+        <button
+          onClick={verTodos}
+          className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white shadow backdrop-blur hover:bg-black/75"
+        >
+          Ver a todos
+        </button>
+      </div>
+    );
+  }
 
   if (!enModoDestacado) {
     return (

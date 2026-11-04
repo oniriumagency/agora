@@ -77,9 +77,9 @@ func esCGNAT(ip string) bool {
 }
 
 type Mapeo struct {
-	Metodo     string // "UPnP" o "NAT-PMP"
-	IPExterna  string // IP WAN que dice el router
-	quitar     func()
+	Metodo    string // "UPnP" o "NAT-PMP"
+	IPExterna string // IP WAN que dice el router
+	quitar    func()
 }
 
 type puertoAbrir struct {

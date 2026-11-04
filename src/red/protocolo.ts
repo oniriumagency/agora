@@ -33,6 +33,16 @@ export interface MensajeChat {
   autorNombre: string;
   texto: string;
   enviadoEn: number;
+  archivo?: ArchivoChat;
+}
+
+/** Archivo compartido en el chat; se descarga del servidor de la reunión mientras exista la sala. */
+export interface ArchivoChat {
+  id: string;
+  nombre: string;
+  tamano: number;
+  tipo: string;
+  vistaPrevia: boolean;
 }
 
 export interface DescripcionSdp {
@@ -72,7 +82,7 @@ export type MensajeCliente =
 
 export type MensajeServidor =
   | { tipo: "SERVIDORES_ICE"; servidores: ServidorIce[] }
-  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number }
+  | { tipo: "BIENVENIDA"; miId: string; sala: string; participantes: Participante[]; chat: MensajeChat[]; maximoVideos: number; clave: string; maximoArchivoMB: number }
   | { tipo: "ENTRO"; participante: Participante }
   | { tipo: "SALIO"; id: string }
   | { tipo: "ESTADO"; id: string; estado: EstadoParticipante }

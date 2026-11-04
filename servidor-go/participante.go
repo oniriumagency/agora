@@ -21,6 +21,7 @@ var ordenPublicacion = []string{"audio", "camara", "pantalla"}
 
 type Participante struct {
 	id    string
+	clave string // secreto para subir archivos; solo lo conoce su navegador
 	sala  *Sala
 	datos DatosParticipante // protegido por sala.mu
 
@@ -32,12 +33,12 @@ type Participante struct {
 	deseados   []string              // vídeos que quiere ver; protegido por sala.mu
 	suscrito   bool                  // ya envió SUSCRIBIR; protegido por sala.mu
 
-	negMu     sync.Mutex
-	listo     bool
-	esperando bool
-	pendiente bool
-	cerrado   bool
-	ranuras   []*Ranura
+	negMu      sync.Mutex
+	listo      bool
+	esperando  bool
+	pendiente  bool
+	cerrado    bool
+	ranuras    []*Ranura
 	mapaPrevio string
 }
 

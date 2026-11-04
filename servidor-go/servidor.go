@@ -17,13 +17,24 @@ type Servidor struct {
 	iceClientes []ServidorIce // STUN/TURN para el navegador
 	iceServidor []webrtc.ICEServer
 
-	mu    sync.Mutex
-	salas map[string]*Sala
+	mu         sync.Mutex
+	salas      map[string]*Sala
 	conexiones int
+	claves     map[string]*Participante
+	archivos   *almacenArchivos
+}
+
+func (s *Servidor) participantePorClave(clave string) *Participante {
+	if clave == "" {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.claves[clave]
 }
 
 func nuevoServidor(config Config, api *webrtc.API) *Servidor {
-	return &Servidor{config: config, api: api, salas: map[string]*Sala{}}
+	return &Servidor{config: config, api: api, salas: map[string]*Sala{}, claves: map[string]*Participante{}, archivos: nuevoAlmacen(config.carpetaDatos)}
 }
 
 func (s *Servidor) fijarIce(clientes []ServidorIce) {
@@ -70,7 +81,12 @@ func (s *Servidor) entrar(p *Participante, codigo string) (string, string) {
 	sala.miembros[p.id] = p
 	sala.mu.Unlock()
 
-	p.enviar(M{"tipo": "BIENVENIDA", "miId": p.id, "sala": codigo, "participantes": presentes, "chat": chat, "maximoVideos": s.config.maximoVideos})
+	p.clave = nuevoID()
+	s.mu.Lock()
+	s.claves[p.clave] = p
+	s.mu.Unlock()
+	p.enviar(M{"tipo": "BIENVENIDA", "miId": p.id, "sala": codigo, "participantes": presentes, "chat": chat, "maximoVideos": s.config.maximoVideos,
+		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB})
 	sala.difundir(M{"tipo": "ENTRO", "participante": p.datos}, p.id)
 	log.Printf("[Sala %s] Entró %s (%d personas)", codigo, p.datos.Nombre, len(presentes)+1)
 	return "", ""
@@ -83,6 +99,9 @@ func (s *Servidor) salir(p *Participante) {
 		return
 	}
 	p.cerrar()
+	s.mu.Lock()
+	delete(s.claves, p.clave)
+	s.mu.Unlock()
 	sala.mu.Lock()
 	_, estaba := sala.miembros[p.id]
 	delete(sala.miembros, p.id)
@@ -100,6 +119,7 @@ func (s *Servidor) salir(p *Participante) {
 			delete(s.salas, sala.codigo)
 		}
 		s.mu.Unlock()
+		s.archivos.olvidarSala(sala)
 	}
 }
 
@@ -112,6 +132,8 @@ func (s *Servidor) cantidadSalas() int {
 func (s *Servidor) rutas(web http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/senal", s.atenderSenal)
+	mux.HandleFunc("/archivos", s.subirArchivo)
+	mux.HandleFunc("/archivos/", s.descargarArchivo)
 	mux.HandleFunc("/salud", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})

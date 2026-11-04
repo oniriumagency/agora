@@ -142,10 +142,10 @@ func (s *Sala) repartir(p *Participante, ranuras []*Ranura) []*Publicada {
 	return sobrantes
 }
 
-func (s *Sala) agregarChat(autor *Participante, texto string) MensajeChat {
+func (s *Sala) agregarChat(autor *Participante, texto string, archivo *ArchivoChat) MensajeChat {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	mensaje := MensajeChat{ID: nuevoID(), AutorID: autor.id, AutorNombre: autor.datos.Nombre, Texto: texto, EnviadoEn: ahoraMs()}
+	mensaje := MensajeChat{ID: nuevoID(), AutorID: autor.id, AutorNombre: autor.datos.Nombre, Texto: texto, EnviadoEn: ahoraMs(), Archivo: archivo}
 	s.chat = append(s.chat, mensaje)
 	if len(s.chat) > historialMaximoChat {
 		s.chat = s.chat[1:]

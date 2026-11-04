@@ -56,21 +56,22 @@ func main() {
 		linea(map[bool]int{true: 0, false: 1}[ok], "Firewall de Windows", estado)
 	}
 
-	red := diagnosticarRed(config)
+	iceInicial, _ := obtenerIceInicial(config.turnID, config.turnToken)
+	turnActivo = len(iceInicial) > 1
+	red := diagnosticarRed(config, turnActivo)
 	api, cerrarMedios, err := crearAPI(config.puertoMedios, red.ipsAnunciar)
 	if err != nil {
 		fallar("%v. ¿Hay otro servidor abierto? Prueba con --puerto-medios.", err)
 	}
 	defer cerrarMedios()
 	servidor := nuevoServidor(config, api)
-	turn := mantenerTurn(servidor, config.turnID, config.turnToken)
-	turnActivo = turn
-	switch {
-	case turn:
-		linea(0, "TURN de Cloudflare", "activo: se puede entrar aunque las redes no permitan conexión directa")
-	case red.accesible:
-		linea(1, "TURN", "sin configurar (opcional si los puertos están abiertos)")
-	default:
+	servidor.fijarIce(iceInicial)
+	if turnActivo {
+		go renovarTurn(servidor, config.turnID, config.turnToken)
+		linea(0, "TURN de Cloudflare", "activo: se puede entrar desde cualquier red, aunque el router no abra puertos")
+	} else if red.accesible {
+		linea(1, "TURN", "sin configurar (opcional: los puertos están abiertos)")
+	} else {
 		linea(1, "TURN", "sin configurar: desde fuera de tu red local el vídeo probablemente no conecte. Añade MEET_TURN_CLOUDFLARE_ID y MEET_TURN_CLOUDFLARE_TOKEN en kubox-meet.env junto al .exe")
 	}
 

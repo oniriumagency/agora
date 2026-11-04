@@ -11,6 +11,15 @@ function Base({ tam = 24, children, ...resto }: Props) {
   );
 }
 
+export const IconoClip = (p: Props) => (
+  <Base {...p}><path d="m21.4 11.1-8.9 8.9a6 6 0 0 1-8.5-8.5l8.9-8.9a4 4 0 0 1 5.7 5.7l-8.9 8.9a2 2 0 0 1-2.8-2.8l8.2-8.2" /></Base>
+);
+export const IconoDescargar = (p: Props) => (
+  <Base {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></Base>
+);
+export const IconoArchivo = (p: Props) => (
+  <Base {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></Base>
+);
 export const IconoMicro = (p: Props) => (
   <Base {...p}><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8" /></Base>
 );
@@ -52,6 +61,12 @@ export const IconoEnviar = (p: Props) => (
 );
 export const IconoFijar = (p: Props) => (
   <Base {...p}><path d="M12 17v5M9 10.8V4h6v6.8l3 3.2v2H6v-2z" /></Base>
+);
+export const IconoPantallaCompleta = (p: Props) => (
+  <Base {...p}><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></Base>
+);
+export const IconoSalirPantallaCompleta = (p: Props) => (
+  <Base {...p}><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" /></Base>
 );
 export const IconoCerrar = (p: Props) => (
   <Base {...p}><path d="M18 6 6 18M6 6l12 12" /></Base>

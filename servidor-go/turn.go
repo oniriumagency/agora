@@ -60,30 +60,26 @@ func pedirTurnCloudflare(id, token string) ([]ServidorIce, error) {
 	return lista, nil
 }
 
-// mantenerTurn pide credenciales y las renueva a mitad de su vida.
-func mantenerTurn(s *Servidor, id, token string) bool {
-	stun := []ServidorIce{{URLs: []string{"stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"}}}
+var stunPublicos = []ServidorIce{{URLs: []string{"stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"}}}
+
+// obtenerIceInicial devuelve STUN y, si hay clave, las credenciales TURN (más de un servidor).
+func obtenerIceInicial(id, token string) ([]ServidorIce, error) {
 	if id == "" || token == "" {
-		s.fijarIce(stun)
-		return false
+		return stunPublicos, nil
 	}
-	renovar := func() bool {
-		turn, err := pedirTurnCloudflare(id, token)
-		if err != nil {
-			log.Printf("[TURN] No se pudieron obtener credenciales: %v", err)
-			return false
+	turn, err := pedirTurnCloudflare(id, token)
+	if err != nil {
+		log.Printf("[TURN] No se pudieron obtener credenciales: %v", err)
+		return stunPublicos, err
+	}
+	return append(append([]ServidorIce{}, stunPublicos...), turn...), nil
+}
+
+// renovarTurn renueva las credenciales a mitad de su vida.
+func renovarTurn(s *Servidor, id, token string) {
+	for range time.Tick(ttlTurn / 2 * time.Second) {
+		if ice, err := obtenerIceInicial(id, token); err == nil {
+			s.fijarIce(ice)
 		}
-		s.fijarIce(append(stun, turn...))
-		return true
 	}
-	ok := renovar()
-	if !ok {
-		s.fijarIce(stun)
-	}
-	go func() {
-		for range time.Tick(ttlTurn / 2 * time.Second) {
-			renovar()
-		}
-	}()
-	return ok
 }

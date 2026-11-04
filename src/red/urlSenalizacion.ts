@@ -12,3 +12,8 @@ export function urlSenalizacion(): string {
   if (process.env.NODE_ENV === "development") return `ws://${hostname}:8090/senal`;
   return `${protocol === "https:" ? "wss" : "ws"}://${host}/senal`;
 }
+
+/** Dirección HTTP del servidor de la reunión (la misma máquina que la señalización). */
+export function urlServidor(): string {
+  return urlSenalizacion().replace(/^ws/, "http").replace(/\/senal$/, "");
+}

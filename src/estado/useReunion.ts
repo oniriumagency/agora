@@ -19,10 +19,15 @@ interface EstadoReunion {
   noLeidos: number;
   panel: Panel;
   fijado: Destacado;
+  /** Vista "solo esta persona": la tesela fijada ocupa todo, sin la tira del resto. */
+  enfocado: boolean;
   avisos: Aviso[];
   reacciones: ReaccionVisible[];
   entradaEn: number | null;
   maximoVideos: number;
+  /** Secreto de esta conexión para subir archivos al chat. */
+  clave: string | null;
+  maximoArchivoMB: number;
   pagina: number;
   /** Problema con el audio y el vídeo (la reunión sigue: chat, mano, etc.). */
   avisoMedios: string | null;
@@ -31,6 +36,8 @@ interface EstadoReunion {
   fijarLocal: (cambios: Partial<EstadoLocal>) => void;
   abrirPanel: (panel: Panel) => void;
   alternarFijado: (destacado: Destacado) => void;
+  enfocar: (destacado: NonNullable<Destacado>) => void;
+  verTodos: () => void;
   ponerParticipantes: (lista: Participante[]) => void;
   agregarParticipante: (participante: Participante) => void;
   quitarParticipante: (id: string) => void;
@@ -70,10 +77,13 @@ export const useReunion = create<EstadoReunion>((set) => ({
   noLeidos: 0,
   panel: null,
   fijado: null,
+  enfocado: false,
   avisos: [],
   reacciones: [],
   entradaEn: null,
   maximoVideos: 9,
+  clave: null,
+  maximoArchivoMB: 95,
   pagina: 0,
   avisoMedios: null,
 
@@ -83,7 +93,10 @@ export const useReunion = create<EstadoReunion>((set) => ({
   alternarFijado: (destacado) =>
     set((actual) => ({
       fijado: actual.fijado && destacado && actual.fijado.id === destacado.id && actual.fijado.pantalla === destacado.pantalla ? null : destacado,
+      enfocado: false,
     })),
+  enfocar: (destacado) => set({ fijado: destacado, enfocado: true }),
+  verTodos: () => set({ fijado: null, enfocado: false }),
   ponerParticipantes: (lista) => set({ participantes: Object.fromEntries(lista.map((participante) => [participante.id, remoto(participante)])) }),
   agregarParticipante: (participante) => set((actual) => ({ participantes: { ...actual.participantes, [participante.id]: remoto(participante) } })),
   quitarParticipante: (id) =>

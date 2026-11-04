@@ -74,7 +74,7 @@ function alRecibir(mensaje: MensajeServidor): void {
       ultimosFlujos = {};
       ultimaSuscripcion = "";
       s.ponerParticipantes(mensaje.participantes);
-      s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9 });
+      s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9, clave: mensaje.clave ?? null, maximoArchivoMB: mensaje.maximoArchivoMB || 95 });
       medios = crearMedios();
       ajustarCalidad();
       return;
@@ -99,7 +99,12 @@ function alRecibir(mensaje: MensajeServidor): void {
     }
     case "CHAT":
       s.agregarChat(mensaje.mensaje);
-      if (s.panel !== "chat" && mensaje.mensaje.autorId !== s.miId) s.avisar(`${mensaje.mensaje.autorNombre}: ${mensaje.mensaje.texto.slice(0, 80)}`, "💬");
+      if (s.panel !== "chat" && mensaje.mensaje.autorId !== s.miId) s.avisar(
+          mensaje.mensaje.archivo
+            ? `${mensaje.mensaje.autorNombre} compartió ${mensaje.mensaje.archivo.nombre.slice(0, 60)}`
+            : `${mensaje.mensaje.autorNombre}: ${mensaje.mensaje.texto.slice(0, 80)}`,
+          mensaje.mensaje.archivo ? "📎" : "💬",
+        );
       return;
     case "REACCION":
       s.mostrarReaccion(mensaje.emoji, mensaje.id === s.miId ? "Tú" : nombreDe(mensaje.id));
@@ -164,7 +169,7 @@ function cerrarTodo(): void {
   medios?.cerrar();
   medios = null;
   soltarMedios();
-  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, panel: null, entradaEn: null });
+  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null });
 }
 
 /** Reintenta el audio y el vídeo volviendo a entrar en la reunión. */

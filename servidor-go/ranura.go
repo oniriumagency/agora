@@ -20,14 +20,14 @@ type Ranura struct {
 	sender *webrtc.RTPSender
 	mid    string
 
-	mu            sync.Mutex
-	fuente        *Publicada
-	cambio        bool
-	iniciada      bool
-	offSeq        uint16
-	offTs         uint32
-	ultimoSeq     uint16
-	ultimoTs      uint32
+	mu             sync.Mutex
+	fuente         *Publicada
+	cambio         bool
+	iniciada       bool
+	offSeq         uint16
+	offTs          uint32
+	ultimoSeq      uint16
+	ultimoTs       uint32
 	ultimaPeticion time.Time
 }
 

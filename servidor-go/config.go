@@ -19,6 +19,7 @@ type Config struct {
 	maximoVideos     int
 	maximoSalas      int
 	maximoConexiones int
+	maximoArchivoMB  int
 	urlPublica       string
 	sinTunel         bool
 	sinUPnP          bool
@@ -40,6 +41,7 @@ func leerConfig() Config {
 	flag.IntVar(&c.maximoVideos, "maximo-videos", entero("MEET_MAXIMO_VIDEOS", 9), "vídeos de cámara que recibe cada persona a la vez")
 	flag.IntVar(&c.maximoSalas, "maximo-salas", entero("MEET_MAXIMO_SALAS", 50), "reuniones simultáneas")
 	flag.IntVar(&c.maximoConexiones, "maximo-conexiones", entero("MEET_MAXIMO_CONEXIONES", 500), "conexiones simultáneas")
+	flag.IntVar(&c.maximoArchivoMB, "maximo-archivo-mb", entero("MEET_MAXIMO_ARCHIVO_MB", 95), "tamaño máximo de cada archivo del chat (el túnel de Cloudflare admite hasta 100 MB)")
 	flag.StringVar(&c.urlPublica, "url-publica", os.Getenv("MEET_URL_PUBLICA"), "URL pública propia (p. ej. https://meet.midominio.com); evita el túnel rápido")
 	flag.BoolVar(&c.sinTunel, "sin-tunel", os.Getenv("MEET_SIN_TUNEL") == "true", "no abrir el túnel de Cloudflare")
 	flag.BoolVar(&c.sinUPnP, "sin-upnp", os.Getenv("MEET_SIN_UPNP") == "true", "no intentar abrir puertos en el router")
