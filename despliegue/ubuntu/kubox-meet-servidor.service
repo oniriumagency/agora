@@ -1,0 +1,26 @@
+# Servidor de señalización de Kubox Meet (salas, señalización WebRTC, chat) como servicio de systemd.
+[Unit]
+Description=Kubox Meet - servidor de señalización
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kubox-meet
+Group=kubox-meet
+WorkingDirectory=/opt/kubox-meet
+# Lee /opt/kubox-meet/.env.local (servidor/src/entorno.ts). Node 22.18+ ejecuta TypeScript directamente.
+Environment=NODE_ENV=production
+Environment=PUERTO=8180
+ExecStart=/usr/bin/node servidor/src/servidor.ts
+KillSignal=SIGTERM
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

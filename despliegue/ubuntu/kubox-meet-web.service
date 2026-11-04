@@ -1,0 +1,24 @@
+# Web de Kubox Meet (Next.js compilado con `npm run build`). Solo escucha en 127.0.0.1: el acceso
+# público entra por el Cloudflare Tunnel.
+[Unit]
+Description=Kubox Meet - web (Next.js)
+After=network-online.target kubox-meet-servidor.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kubox-meet
+Group=kubox-meet
+WorkingDirectory=/opt/kubox-meet
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3100
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/kubox-meet/.next
+
+[Install]
+WantedBy=multi-user.target
