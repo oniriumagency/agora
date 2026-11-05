@@ -11,7 +11,7 @@ import { SelectorDispositivos } from "./SelectorDispositivos";
 import { VistaPrevia } from "./VistaPrevia";
 import { prepararClaves } from "@/cifrado/claves";
 import { cifradoMediosDisponible } from "@/cifrado/medios";
-import { guardarSecreto, secretoDe } from "@/cifrado/secretoSala";
+import { guardarSecreto, mostrarSecretoEnUrl, secretoDe } from "@/cifrado/secretoSala";
 
 /** Sala de espera: vista previa de cámara y micrófono, nombre y botón para entrar. */
 const CLAVE_NOMBRE = "agora.nombre";
@@ -57,6 +57,7 @@ export function SalaEspera({ codigo }: { codigo: string }) {
       return setProblema("No se pudo preparar el cifrado en este navegador (hace falta una conexión segura: https o localhost).");
     }
     guardarSecreto(codigo, secreto);
+    mostrarSecretoEnUrl(codigo);
     try {
       localStorage.setItem(CLAVE_NOMBRE, limpio);
       localStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify({ microfono: local.microfono, camara: local.camara }));

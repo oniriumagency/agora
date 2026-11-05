@@ -18,7 +18,8 @@ compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compart
 
 Cada reunión tiene una **clave secreta** que viaja en el enlace tras el `#`
 (`https://…/abc-defg-hij#clave`). Los navegadores nunca envían esa parte al servidor. Al abrir el
-enlace, la clave se guarda solo en esa pestaña y se borra de la barra de direcciones. Quien crea la
+enlace, la clave se guarda solo en esa pestaña; la dirección del navegador la conserva para que
+copiarla sirva para invitar. Quien crea la
 reunión también puede elegir una contraseña propia (mínimo 8 caracteres) y dictarla junto al código.
 
 De la clave se derivan, en el navegador (PBKDF2 con 210 000 iteraciones y HKDF, sal = código de sala):

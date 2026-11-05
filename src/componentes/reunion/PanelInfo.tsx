@@ -5,6 +5,7 @@ import { ESPERAS_BOLSILLO, esIPhone, esperaBolsillo, fijarEsperaBolsillo } from 
 import { fijarSonidos, prepararSonidos, sonarEntrada, sonidosActivados } from "@/medios/sonidos";
 import { BotonCopiarEnlace } from "./BotonCopiarEnlace";
 import { secretoDe } from "@/cifrado/secretoSala";
+import { enlaceDeSala } from "@/utilidades/codigoSala";
 
 /** Detalles de la reunión: enlace para invitar y cómo funciona la conexión. */
 export function PanelInfo() {
@@ -16,11 +17,11 @@ export function PanelInfo() {
   return (
     <div className="flex-1 overflow-y-auto px-6 pb-6 text-sm text-gray-700">
       <h3 className="font-medium text-gray-900">Información para unirse</h3>
-      <p className="mt-1 break-all text-gray-600">{typeof window !== "undefined" ? `${window.location.origin}/${sala}` : sala}</p>
+      <p className="mt-1 break-all text-gray-600">{typeof window !== "undefined" ? enlaceDeSala(sala, verClave ? secretoDe(sala) : null) : sala}{!verClave && "#••••••"}</p>
       <p className="mt-1 text-gray-600">
-        Clave: <span className="font-mono">{verClave ? secretoDe(sala) : "••••••••"}</span>{" "}
+        El enlace lleva la clave tras el «#».{" "}
         <button onClick={() => setVerClave(!verClave)} className="text-acento-fuerte hover:underline">
-          {verClave ? "Ocultar" : "Mostrar"}
+          {verClave ? "Ocultar clave" : "Mostrar clave"}
         </button>
       </p>
       <div className="mt-3">

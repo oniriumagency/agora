@@ -93,7 +93,7 @@ async function videoVivo(pagina, textoEtiqueta) {
 
     const enClaro = ENVIADO.filter((m) => /"nombre":"(Ana|Beto)"|me escuchan|captura\.png|IHDR/.test(m));
     comprobar(enClaro.length === 0, "Nombres, chat y archivos salen cifrados (el servidor no los ve)");
-    comprobar(!(await ana.evaluate(() => location.hash)), "La clave desaparece de la barra de direcciones");
+    comprobar((await ana.evaluate(() => location.hash)) === `#${CLAVE}`, "La dirección de la reunión conserva la clave para compartirla");
 
     const intruso = await entrar(navegador, "Intrusa", "otra-clave-cualquiera");
     const rechazada = await intruso.getByText("La clave de la reunión no es correcta").waitFor({ timeout: 10000 }).then(() => true, () => false);
