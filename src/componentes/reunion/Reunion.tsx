@@ -1,5 +1,5 @@
 "use client";
-import { irAlDirecto, reintentarMedios } from "@/estado/sesion";
+import { reintentarMedios } from "@/estado/sesion";
 import { useReunion } from "@/estado/useReunion";
 import { AudiosRemotos } from "./AudiosRemotos";
 import { ModoBolsillo } from "./ModoBolsillo";
@@ -15,7 +15,6 @@ import { useAtajos } from "./useAtajos";
 export function Reunion() {
   const fase = useReunion((estado) => estado.fase);
   const avisoMedios = useReunion((estado) => estado.avisoMedios);
-  const reponiendo = useReunion((estado) => estado.reponiendo);
   useAtajos();
 
   return (
@@ -23,14 +22,6 @@ export function Reunion() {
       {fase === "reconectando" && (
         <div className="bg-oro px-4 py-2 text-center text-sm font-medium text-gray-900" role="status">
           Se perdió la conexión con el servidor. Reconectando…
-        </div>
-      )}
-      {reponiendo && (
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-acento-fuerte px-4 py-2 text-center text-sm text-white" role="status">
-          <span>⏩ Escuchando a 1,5× lo que se dijo mientras no estabas</span>
-          <button onClick={irAlDirecto} className="rounded-full bg-white/20 px-3 py-1 font-medium hover:bg-white/30">
-            Ir al directo
-          </button>
         </div>
       )}
       {avisoMedios && (

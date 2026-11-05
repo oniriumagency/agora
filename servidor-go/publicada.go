@@ -46,9 +46,6 @@ func (p *Publicada) reenviar() {
 		if err != nil {
 			return
 		}
-		if p.tipo == "audio" && p.autor.sala != nil {
-			p.autor.sala.grabacion.agregar(p.autor, paquete, p.autor.sala.servidor.config.graciaReconexion)
-		}
 		p.mu.RLock()
 		for r := range p.destinos {
 			r.escribir(paquete, p)

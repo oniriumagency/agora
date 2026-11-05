@@ -126,18 +126,11 @@ async function videoVivo(pagina, textoEtiqueta) {
     }
     await ana.getByLabel("Dejar de presentar").first().click();
     // Corte de conexión de Ana: debe volver sola a su sitio sin que Beto la vea salir
-    await ana.keyboard.press("Control+d"); // Ana vuelve a abrir el micrófono para hablar sin conexión
     await ana.context().setOffline(true);
     await ana.evaluate(() => window.__sockets.at(-1).close(4000));
-    await ana.waitForTimeout(5000); // 5 s sin red: Beto sigue hablando y Ana también
+    await ana.waitForTimeout(5000); // 5 s sin red
     await ana.context().setOffline(false);
     await ana.waitForFunction(() => window.__sockets.at(-1).readyState === 1, null, { timeout: 15000 });
-    await ana.getByText(/Escuchando a 1,5× lo que se dijo/).waitFor({ timeout: 10000 });
-    comprobar(true, "Al volver, Ana escucha a 1,5× lo que se dijo mientras no estaba");
-    await beto.getByText("Escuchando lo que dijo Ana sin conexión (1,5×)").waitFor({ timeout: 15000 });
-    comprobar(true, "Beto escucha a 1,5× lo que Ana dijo sin conexión");
-    await ana.getByText(/Escuchando a 1,5× lo que se dijo/).waitFor({ state: "detached", timeout: 30000 });
-    comprobar(true, "Ana alcanza el directo");
     comprobar(await videoVivo(beto, "Ana"), "Tras cortarse la conexión, Ana vuelve y Beto la ve de nuevo");
     comprobar(beto.__salidas === 0 && (await beto.locator("[data-tesela]", { hasText: "Ana" }).count()) >= 1, "Beto no vio salir a Ana durante el corte");
 

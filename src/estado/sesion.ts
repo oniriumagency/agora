@@ -4,7 +4,6 @@ import type { MensajeServidor, ServidorIce } from "@/red/protocolo";
 import { componerServidoresIce } from "@/red/servidoresIce";
 import { useReunion, LOCAL_INICIAL } from "./useReunion";
 import { alternarCamara, alternarMicrofono, fijarMicrofono, pausarCamaraSiOculta, pistasLocales, recuperarPistas, soltarMedios } from "./controlesLocales";
-import { descartarGrabacion, enviarLoGrabado, escucharLoQueDijo, grabarSinConexion, ponerseAlDia, type Reposicion } from "@/medios/reposicion";
 import { anunciarLlamada, reflejarEstadoLlamada, terminarLlamada } from "@/medios/sesionMultimedia";
 import { sonarEntrada, sonarSalida } from "@/medios/sonidos";
 import { mantenerPantallaEncendida, soltarPantallaEncendida } from "@/medios/pantallaEncendida";
@@ -36,26 +35,6 @@ let reintentos = 0;
 let caidaDesde: number | null = null;
 let temporizadorReintento: ReturnType<typeof setTimeout> | null = null;
 let alPong: (() => void) | null = null;
-let reposicion: Reposicion | null = null;
-
-function iniciarReposicion(desde: number, clave: string): void {
-  reposicion?.cancelar();
-  estado().fijar({ reponiendo: true });
-  const actual = ponerseAlDia(desde, clave, () => undefined);
-  reposicion = actual;
-  void actual.terminada.then(() => {
-    if (reposicion === actual) {
-      reposicion = null;
-      estado().fijar({ reponiendo: false });
-    }
-  });
-}
-
-/** Saltar lo pendiente y volver al directo. */
-export function irAlDirecto(): void {
-  reposicion?.cancelar();
-}
-
 const estado = () => useReunion.getState();
 
 export const enviarAlServidor = (...argumentos: Parameters<ClienteSenal["enviar"]>): void => cliente?.enviar(...argumentos);
@@ -109,9 +88,6 @@ function alRecibir(mensaje: MensajeServidor): void {
       s.fijar({ anfitrion: mensaje.id });
       if (mensaje.id === s.miId) s.avisar("Ahora eres el anfitrión de la reunión", "👑");
       return;
-    case "VOZ":
-      escucharLoQueDijo(mensaje.id, () => s.avisar(`Escuchando lo que dijo ${mensaje.nombre} sin conexión (1,5×)`, "⏩"));
-      return;
     case "SILENCIADO":
       void fijarMicrofono(false);
       s.avisar(`${mensaje.por} silenció tu micrófono`, "🔇");
@@ -132,10 +108,6 @@ function alRecibir(mensaje: MensajeServidor): void {
       s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9, clave: mensaje.clave ?? null, maximoArchivoMB: mensaje.maximoArchivoMB || 95, anfitrion: mensaje.anfitrion ?? null });
       medios = crearMedios();
       ajustarCalidad();
-      if (mensaje.reanudada && mensaje.clave) {
-        void enviarLoGrabado(mensaje.clave);
-        if (mensaje.ausenteDesde) iniciarReposicion(mensaje.ausenteDesde, mensaje.clave);
-      } else descartarGrabacion();
       anunciarLlamada(mensaje.sala, { alternarMicrofono: () => void alternarMicrofono(), alternarCamara: () => void alternarCamara(), colgar: salir });
       reflejarEstadoLlamada(s.local.microfono, s.local.camara);
       return;
@@ -204,7 +176,6 @@ function alCerrar(inesperado: boolean): void {
   medios?.cerrar();
   medios = null;
   // Se conservan las personas en pantalla: al volver, el servidor confirma quién sigue
-  if (s.fase === "reunion" && s.local.microfono) grabarSinConexion(pistasLocales().audio);
   s.fijar({ fase: "reconectando" });
   caidaDesde ??= Date.now();
   programarReintento();
@@ -334,9 +305,6 @@ function cerrarTodo(): void {
   if (temporizadorReintento) clearTimeout(temporizadorReintento);
   temporizadorReintento = null;
   void soltarPantallaEncendida();
-  reposicion?.cancelar();
-  reposicion = null;
-  descartarGrabacion();
   terminarLlamada();
   cliente?.cerrar();
   cliente = null;
@@ -344,7 +312,7 @@ function cerrarTodo(): void {
   medios = null;
   detenerCifradoMedios();
   soltarMedios();
-  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null, clave: null, anfitrion: null, reponiendo: false });
+  estado().fijar({ participantes: {}, miId: null, local: LOCAL_INICIAL, fijado: null, enfocado: false, panel: null, entradaEn: null, clave: null, anfitrion: null });
 }
 
 /** Reintenta el audio y el vídeo volviendo a entrar en la reunión. */

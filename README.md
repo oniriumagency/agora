@@ -27,7 +27,7 @@ De la clave se derivan, en el navegador (PBKDF2 con 210 000 iteraciones y HKDF, 
 | Clave | Para qué |
 |---|---|
 | Medios (AES-GCM 256) | Cada fotograma de audio y vídeo, con WebRTC Encoded Transform. Solo quedan en claro los primeros bytes de cada fotograma (1 en audio, 3 o 10 en vídeo) para que el servidor sepa dónde empieza un fotograma clave. |
-| Datos (AES-GCM 256) | Chat, nombres de las personas, archivos (contenido, nombre y tipo) y el audio grabado sin conexión. |
+| Datos (AES-GCM 256) | Chat, nombres de las personas, archivos (contenido, nombre y tipo). |
 | Acceso | Una huella que el servidor compara para dejar entrar. No sirve para descifrar nada. |
 
 Qué ve cada parte:
@@ -140,7 +140,7 @@ src/
   estado/           Estado de la reunión (zustand) y controles locales
   medios/           Cámara, micrófono, sonidos y detección de voz
   red/              Cliente de señalización, conexión con el SFU y protocolo
-  cifrado/          Claves de la reunión, cifrado de medios (trabajador), mensajes y audio de reconexión
+  cifrado/          Claves de la reunión, cifrado de medios (trabajador), y mensajes
 despliegue/ubuntu/  Servicio systemd e instalador para Linux
 scripts/            Desarrollo y construcción de los ejecutables
 pruebas/            Pruebas de extremo a extremo con Playwright

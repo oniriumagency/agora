@@ -26,7 +26,6 @@ type Participante struct {
 	// ausente: su conexión se cortó sin colgar y se le guarda el sitio (protegido por sala.mu)
 	ausente      bool
 	dispositivo  string
-	ausenteDesde int64        // ms; cuándo se cortó (para reponerle lo que se perdió)
 	ultimaSenal  atomic.Int64 // ms; último mensaje o pong recibido
 	sala         *Sala
 	datos        DatosParticipante // protegido por sala.mu

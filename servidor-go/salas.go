@@ -24,8 +24,6 @@ type Sala struct {
 	acceso string
 	// vetados: dispositivos expulsados; no pueden volver a esta reunión mientras exista.
 	vetados map[string]bool
-	// grabacion: audio reciente mientras alguien está desconectado (ver grabacion.go)
-	grabacion grabadora
 }
 
 func nuevoID() string {

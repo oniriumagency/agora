@@ -37,12 +37,6 @@ func (s *Servidor) desconectar(p *Participante, adrede bool) {
 	estado := p.datos.Estado
 	sala.mu.Unlock()
 	log.Printf("[Sala %s] %s perdió la conexión; se le guarda el sitio %s", sala.codigo, p.id[:6], s.config.graciaReconexion)
-	// Desde el último latido: lo que se dijo mientras el corte aún no se notaba también se repone
-	p.ausenteDesde = p.ultimaSenal.Load()
-	if p.ausenteDesde == 0 || ahoraMs()-p.ausenteDesde > ventanaFija.Milliseconds() {
-		p.ausenteDesde = ahoraMs()
-	}
-	sala.grabacion.activar(ahoraMs() + (s.config.graciaReconexion + 30*time.Second).Milliseconds())
 	sala.difundir(M{"tipo": "ESTADO", "id": p.id, "estado": estado}, p.id)
 	sala.actualizarResto(p.id)
 	time.AfterFunc(s.config.graciaReconexion, func() {
@@ -86,7 +80,6 @@ func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) 
 	p.datos.Estado.Ausente = false
 	p.deseados, p.suscrito = anterior.deseados, anterior.suscrito
 	p.dispositivo = anterior.dispositivo
-	ausenteDesde := anterior.ausenteDesde
 	p.sala = sala
 	sala.miembros[p.id] = p
 	presentes := make([]DatosParticipante, 0, len(sala.miembros))
@@ -109,7 +102,7 @@ func (s *Servidor) reanudar(p *Participante, m *MensajeEntrante, nombre string) 
 	_ = anterior.conn.Close()
 
 	p.enviar(M{"tipo": "BIENVENIDA", "miId": p.id, "sala": sala.codigo, "participantes": presentes, "chat": chat, "maximoVideos": s.config.maximoVideos,
-		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "reanudada": true, "anfitrion": anfitrion, "ausenteDesde": ausenteDesde})
+		"clave": p.clave, "maximoArchivoMB": s.config.maximoArchivoMB, "reanudada": true, "anfitrion": anfitrion})
 	sala.difundir(M{"tipo": "ESTADO", "id": p.id, "estado": estado}, p.id)
 	sala.actualizarResto(p.id)
 	log.Printf("[Sala %s] %s volvió a conectarse", sala.codigo, p.id[:6])

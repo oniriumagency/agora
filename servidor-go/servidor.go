@@ -167,8 +167,6 @@ func (s *Servidor) rutas(web http.Handler) http.Handler {
 	mux.HandleFunc("/senal", s.atenderSenal)
 	mux.HandleFunc("/archivos", s.subirArchivo)
 	mux.HandleFunc("/archivos/", s.descargarArchivo)
-	mux.HandleFunc("/reposicion", s.atenderReposicion)
-	mux.HandleFunc("/voz", s.subirVoz)
 	mux.HandleFunc("/salud", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})

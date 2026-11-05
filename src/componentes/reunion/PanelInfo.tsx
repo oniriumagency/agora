@@ -78,10 +78,7 @@ export function PanelInfo() {
         servidor. El servidor (y el túnel o el relé TURN, si los hay) solo reenvía datos que no puede leer. Quien tenga el enlace completo puede entrar: compártelo
         solo con quien quieras en la reunión.
       </p>
-      <p className="mt-2 leading-relaxed text-gray-600">
-        Para que quien pierde la conexión pueda escuchar lo que se perdió, el servidor guarda en memoria el audio cifrado de los últimos 30 segundos (y hasta 3
-        minutos mientras alguien está desconectado). Nunca se graba en disco y se descarta solo.
-      </p>
+      <p className="mt-2 leading-relaxed text-gray-600">El servidor no guarda audio ni vídeo: solo los reenvía en directo.</p>
       <h3 className="mt-6 font-medium text-gray-900">Atajos de teclado</h3>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-gray-600">
         <dt className="font-mono text-xs">Ctrl + D</dt>

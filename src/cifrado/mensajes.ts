@@ -40,8 +40,6 @@ export async function descifrarMensaje(m: MensajeServidor): Promise<MensajeServi
       return { ...m, participante: await participante(m.participante) };
     case "CHAT":
       return { ...m, mensaje: await chat(m.mensaje) };
-    case "VOZ":
-      return { ...m, nombre: await nombre(m.nombre) };
     case "SILENCIADO":
     case "EXPULSADO":
       return { ...m, por: await nombre(m.por) };

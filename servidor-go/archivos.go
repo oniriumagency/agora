@@ -186,30 +186,3 @@ func formatearBytes(n int64) string {
 	}
 	return fmt.Sprintf("%d B", n)
 }
-
-// subirVoz: POST /voz (cabecera X-Clave). Lo que alguien dijo mientras estaba sin conexión; al
-// volver se sube y los demás lo escuchan a 1,5×. No aparece en el chat.
-func (s *Servidor) subirVoz(w http.ResponseWriter, r *http.Request) {
-	permitirOrigenes(w)
-	if r.Method == http.MethodOptions {
-		return
-	}
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	p := s.participantePorClave(r.Header.Get("X-Clave"))
-	if p == nil || p.sala == nil {
-		http.Error(w, "Solo quien está en la reunión.", http.StatusForbidden)
-		return
-	}
-	const limite = 8 << 20 // ~3 minutos de voz sobran
-	archivo, err := s.archivos.guardar(p.sala, "voz", http.MaxBytesReader(w, r.Body, limite))
-	if err != nil {
-		http.Error(w, "No se pudo guardar el audio.", http.StatusRequestEntityTooLarge)
-		return
-	}
-	log.Printf("[Sala %s] %s envió lo que dijo sin conexión (%s)", p.sala.codigo, p.id[:6], formatearBytes(archivo.Tamano))
-	p.sala.difundir(M{"tipo": "VOZ", "id": archivo.ID, "autor": p.id, "nombre": p.datos.Nombre}, p.id)
-	w.WriteHeader(http.StatusCreated)
-}
