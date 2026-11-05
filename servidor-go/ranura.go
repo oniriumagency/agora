@@ -3,11 +3,13 @@ package main
 // Ranuras: cada participante recibe el audio y el vídeo de los demás por un conjunto de
 // transceptores fijos ("ranuras"). Cambiar quién se ve en una ranura (al pasar de página o al
 // empezar alguien a presentar) no exige renegociar: el servidor cambia la fuente y reescribe los
-// números de secuencia y las marcas de tiempo para que el navegador vea un flujo continuo.
+// números de secuencia y las marcas de tiempo para que el navegador vea un flujo continuo. Cambiar
+// de capa de simulcast (más o menos calidad) se hace igual, en el siguiente fotograma clave.
 
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pion/rtp"
@@ -20,8 +22,15 @@ type Ranura struct {
 	sender *webrtc.RTPSender
 	mid    string
 
-	mu             sync.Mutex
-	fuente         *Publicada
+	// enviados: bytes que salen hacia este participante (los mide el control de capas)
+	enviados *atomic.Int64
+
+	mu     sync.Mutex
+	fuente *Publicada
+	// preferida: índice en ordenCapas de la calidad que cabe en la conexión de quien mira
+	preferida int
+	capa      string // capa que se está reenviando
+	objetivo  string // capa a la que se quiere pasar (en el próximo fotograma clave)
 	cambio         bool
 	iniciada       bool
 	offSeq         uint16
@@ -41,13 +50,57 @@ func (r *Ranura) fijarFuente(nueva *Publicada) {
 	}
 	r.fuente = nueva
 	r.cambio = true
+	r.objetivo = r.elegirCapa(nueva)
+	objetivo := r.objetivo
 	r.mu.Unlock()
 	if anterior != nil {
 		anterior.quitarDestino(r)
 	}
 	if nueva != nil {
 		nueva.agregarDestino(r)
-		nueva.pedirClave()
+		nueva.pedirClave(objetivo)
+	}
+}
+
+// elegirCapa: la mejor capa activa que no pase de la preferida; si no hay, la más baja activa.
+// Se llama con r.mu tomado.
+func (r *Ranura) elegirCapa(fuente *Publicada) string {
+	if fuente == nil {
+		return ""
+	}
+	activas := fuente.activas()
+	if len(activas) == 0 {
+		return r.objetivo
+	}
+	elegida := activas[0]
+	for _, rid := range activas {
+		if indiceCapa(rid) <= r.preferida {
+			elegida = rid
+		}
+	}
+	return elegida
+}
+
+func indiceCapa(rid string) int {
+	for i, c := range ordenCapas {
+		if c == rid {
+			return i
+		}
+	}
+	return 0
+}
+
+// fijarPreferida cambia la calidad deseada; el cambio real ocurre en el próximo fotograma clave.
+func (r *Ranura) fijarPreferida(nivel int) {
+	r.mu.Lock()
+	r.preferida = nivel
+	fuente := r.fuente
+	objetivo := r.elegirCapa(fuente)
+	nuevo := objetivo != r.objetivo
+	r.objetivo = objetivo
+	r.mu.Unlock()
+	if nuevo && fuente != nil {
+		fuente.pedirClave(objetivo)
 	}
 }
 
@@ -57,15 +110,17 @@ func (r *Ranura) fuenteActual() *Publicada {
 	return r.fuente
 }
 
-// escribir reenvía un paquete de la fuente con la secuencia y el tiempo reescritos.
-func (r *Ranura) escribir(paquete *rtp.Packet, desde *Publicada) {
+// escribir reenvía un paquete de la fuente con la secuencia y el tiempo reescritos. Mientras se
+// espera el fotograma clave de la capa nueva se sigue enviando la anterior, sin cortes.
+func (r *Ranura) escribir(paquete *rtp.Packet, desde *Publicada, rid string) {
 	r.mu.Lock()
 	if r.fuente != desde {
 		r.mu.Unlock()
 		return
 	}
-	if r.cambio {
-		// En vídeo hay que empezar por un fotograma clave o el decodificador mostraría basura
+	if rid == r.objetivo && (r.cambio || rid != r.capa) {
+		// Empieza la fuente nueva o se pasa a otra capa: en vídeo, solo en un fotograma clave
+		// (si no, el decodificador mostraría basura). Mientras, la capa anterior sigue llegando.
 		if r.tipo != "audio" && !esClaveVP8(paquete.Payload) {
 			pedir := time.Since(r.ultimaPeticion) > time.Second
 			if pedir {
@@ -73,7 +128,7 @@ func (r *Ranura) escribir(paquete *rtp.Packet, desde *Publicada) {
 			}
 			r.mu.Unlock()
 			if pedir {
-				desde.pedirClave()
+				desde.pedirClave(rid)
 			}
 			return
 		}
@@ -87,6 +142,10 @@ func (r *Ranura) escribir(paquete *rtp.Packet, desde *Publicada) {
 		}
 		r.cambio = false
 		r.iniciada = true
+		r.capa = rid
+	} else if r.cambio || rid != r.capa {
+		r.mu.Unlock()
+		return
 	}
 	copia := *paquete
 	copia.Header.Extensions = nil
@@ -95,6 +154,9 @@ func (r *Ranura) escribir(paquete *rtp.Packet, desde *Publicada) {
 	copia.Timestamp += r.offTs
 	r.ultimoSeq, r.ultimoTs = copia.SequenceNumber, copia.Timestamp
 	r.mu.Unlock()
+	if r.enviados != nil {
+		r.enviados.Add(int64(len(copia.Payload) + 40))
+	}
 	_ = r.local.WriteRTP(&copia)
 }
 

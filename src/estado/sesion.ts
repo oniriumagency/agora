@@ -70,10 +70,6 @@ export function suscribir(ids: string[]): void {
   cliente?.enviar({ tipo: "SUSCRIBIR", videos: ids });
 }
 
-function ajustarCalidad(): void {
-  void medios?.ajustarCalidad(Object.keys(estado().participantes).length + 1);
-}
-
 function alRecibir(mensaje: MensajeServidor): void {
   const s = estado();
   switch (mensaje.tipo) {
@@ -83,6 +79,9 @@ function alRecibir(mensaje: MensajeServidor): void {
       return;
     case "PONG":
       alPong?.();
+      return;
+    case "CAPAS":
+      medios?.fijarCapaMaxima(mensaje.maxima);
       return;
     case "ANFITRION":
       s.fijar({ anfitrion: mensaje.id });
@@ -107,14 +106,12 @@ function alRecibir(mensaje: MensajeServidor): void {
       s.ponerParticipantes(mensaje.participantes);
       s.fijar({ fase: "reunion", miId: mensaje.miId, chat: mensaje.chat, error: null, entradaEn: s.entradaEn ?? Date.now(), maximoVideos: mensaje.maximoVideos || 9, clave: mensaje.clave ?? null, maximoArchivoMB: mensaje.maximoArchivoMB || 95, anfitrion: mensaje.anfitrion ?? null });
       medios = crearMedios();
-      ajustarCalidad();
       anunciarLlamada(mensaje.sala, { alternarMicrofono: () => void alternarMicrofono(), alternarCamara: () => void alternarCamara(), colgar: salir });
       reflejarEstadoLlamada(s.local.microfono, s.local.camara);
       return;
     case "ENTRO":
       s.agregarParticipante(mensaje.participante);
       s.ponerFlujos(ultimosFlujos);
-      ajustarCalidad();
       s.avisar(`${mensaje.participante.nombre} se unió`, "👋");
       sonarEntrada();
       return;
@@ -124,7 +121,6 @@ function alRecibir(mensaje: MensajeServidor): void {
         sonarSalida();
       }
       s.quitarParticipante(mensaje.id);
-      ajustarCalidad();
       return;
     case "ESTADO": {
       const anterior = s.participantes[mensaje.id]?.estado;

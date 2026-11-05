@@ -94,6 +94,7 @@ export type MensajeServidor =
   | { tipo: "SILENCIADO"; por: string }
   | { tipo: "EXPULSADO"; por: string }
   | { tipo: "PONG" }
+  | { tipo: "CAPAS"; maxima: number }
   | { tipo: "ENTRO"; participante: Participante }
   | { tipo: "SALIO"; id: string }
   | { tipo: "ESTADO"; id: string; estado: EstadoParticipante }

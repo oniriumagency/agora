@@ -89,6 +89,12 @@ tráfico por encima de su cuota gratuita.
   el servidor cambia qué vídeo va en cada ranura (reescribiendo secuencia y tiempos RTP) sin
   renegociar. Solo se descarga el vídeo de quien se ve en pantalla (`MEET_MAXIMO_VIDEOS`, 9 por
   defecto); el audio llega de todos.
+- **Simulcast**: cada cámara envía tres calidades (320, 640 y 1280 px de ancho; unos 150, 500 y
+  1500 kbps). El servidor mide con transport-cc y GCC el ancho de banda hacia cada persona y le
+  reenvía la calidad que le cabe: la alta solo con una o dos cámaras en pantalla, y baja enseguida si
+  aparece congestión. A quien publica se le pide que no envíe calidades que nadie está viendo.
+- **Audio**: Opus con corrección de errores en banda y DTX (casi no gasta mientras alguien calla).
+  Los navegadores ajustan su envío con transport-cc. El servidor no guarda audio ni vídeo.
 - **Un puerto de medios** (8091 UDP y TCP) para todas las conexiones; TCP sirve en redes que
   bloquean UDP.
 - **Web** (`src/`, Next.js 14 + TypeScript + Tailwind) exportada como archivos estáticos.
@@ -96,7 +102,7 @@ tráfico por encima de su cuota gratuita.
 ### ¿Cuánta gente cabe?
 
 El límite real es la **subida** de quien aloja: cada persona que mira recibe hasta 9 vídeos
-(entre 300 y 500 kbps cada uno en reuniones grandes, porque la calidad baja sola con el tamaño) y
+(unos 500 kbps cada uno con tres o más en pantalla, o menos si su conexión no da para más) y
 el audio de todos. Calcula aproximadamente 2 o 3 Mbps de subida por participante con vídeo:
 
 | Subida del servidor | Personas con vídeo cómodas |

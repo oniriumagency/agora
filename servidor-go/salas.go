@@ -70,7 +70,6 @@ func (s *Sala) publicar(p *Participante, pub *Publicada) {
 	}
 	p.publicadas[pub.tipo] = pub
 	s.mu.Unlock()
-	go pub.reenviar()
 	s.actualizarResto(p.id)
 }
 

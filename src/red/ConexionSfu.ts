@@ -18,6 +18,17 @@ const ESPERA_MAXIMA_CONEXION_MS = 25_000;
 export const ORDEN_PISTAS: TipoPista[] = ["audio", "camara", "pantalla"];
 const CLASE: Record<TipoPista, "audio" | "video"> = { audio: "audio", camara: "video", pantalla: "video" };
 
+/**
+ * Simulcast de la cámara: tres calidades de la misma imagen. El servidor reenvía a cada persona la
+ * que cabe en su conexión y avisa (CAPAS) de cuál es la más alta que alguien ve, para no gastar
+ * subida en las demás. El orden (de menos a más) es el que espera el servidor.
+ */
+const CAPAS_CAMARA: RTCRtpEncodingParameters[] = [
+  { rid: "q", scaleResolutionDownBy: 4, maxBitrate: 150_000 },
+  { rid: "h", scaleResolutionDownBy: 2, maxBitrate: 500_000 },
+  { rid: "f", scaleResolutionDownBy: 1, maxBitrate: 1_500_000 },
+];
+
 export type FlujosPorPersona = Record<string, Partial<Record<TipoPista, MediaStream>>>;
 
 export interface EventosSfu {
@@ -36,6 +47,7 @@ export class ConexionSfu {
   private cerrada = false;
   private conecto = false;
   private avisada = false;
+  private capaMaxima = CAPAS_CAMARA.length - 1;
 
   constructor(servidoresIce: RTCIceServer[], private readonly eventos: EventosSfu) {
     const configuracion = { iceServers: servidoresIce, bundlePolicy: "max-bundle", encodedInsertableStreams: usaFlujosCodificados() } as RTCConfiguration;
@@ -58,7 +70,7 @@ export class ConexionSfu {
 
   async iniciar(pistas: Readonly<Record<TipoPista, MediaStreamTrack | null>>): Promise<void> {
     for (const tipo of ORDEN_PISTAS) {
-      const transceptor = this.conexion.addTransceiver(CLASE[tipo], { direction: "sendonly" });
+      const transceptor = this.conexion.addTransceiver(CLASE[tipo], tipo === "camara" ? { direction: "sendonly", sendEncodings: CAPAS_CAMARA } : { direction: "sendonly" });
       protegerEmisor(transceptor.sender, CLASE[tipo]);
       await transceptor.sender.replaceTrack(pistas[tipo]);
       this.envios.set(tipo, transceptor.sender);
@@ -89,6 +101,7 @@ export class ConexionSfu {
     }
     for (const candidato of this.candidatosPendientes.splice(0)) await this.conexion.addIceCandidate(candidato).catch(() => undefined);
     this.recalcular();
+    void this.aplicarCapas();
   }
 
   fijarMapa(mapa: Record<string, { id: string; tipo: TipoPista }>): void {
@@ -100,16 +113,20 @@ export class ConexionSfu {
     await this.envios.get(tipo)?.replaceTrack(pista).catch((error) => console.warn("[SFU] replaceTrack", error));
   }
 
-  /** Ajusta la calidad de la cámara al tamaño de la reunión: menos bits cuanta más gente. */
-  async ajustarCalidad(personas: number): Promise<void> {
+  /** Activa las capas de la cámara hasta `maxima` (0 baja, 1 media, 2 alta); las demás no se envían. */
+  fijarCapaMaxima(maxima: number): void {
+    this.capaMaxima = maxima;
+    void this.aplicarCapas();
+  }
+
+  /** setParameters falla mientras hay una negociación en curso: entonces se reintenta. */
+  private async aplicarCapas(): Promise<void> {
     const emisor = this.envios.get("camara");
-    if (!emisor) return;
-    const parametros = emisor.getParameters();
-    if (!parametros.encodings?.length) return;
-    const [bits, escala] = personas <= 2 ? [1_500_000, 1] : personas <= 4 ? [900_000, 1] : personas <= 9 ? [500_000, 1.5] : [300_000, 2];
-    parametros.encodings[0].maxBitrate = bits;
-    parametros.encodings[0].scaleResolutionDownBy = escala;
-    await emisor.setParameters(parametros).catch(() => undefined);
+    const parametros = emisor?.getParameters();
+    if (!emisor || !parametros?.encodings?.length || this.cerrada) return;
+    if (parametros.encodings.every((capa, i) => capa.active === i <= this.capaMaxima)) return;
+    parametros.encodings.forEach((capa, i) => (capa.active = i <= this.capaMaxima));
+    await emisor.setParameters(parametros).catch(() => setTimeout(() => void this.aplicarCapas(), 1000));
   }
 
   cerrar(): void {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pion/interceptor/pkg/cc"
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
@@ -34,7 +35,11 @@ type Participante struct {
 	escMu sync.Mutex
 
 	pc         *webrtc.PeerConnection
+	estimador  cc.BandwidthEstimator // ancho de banda hacia su navegador (GCC)
+	enviados   atomic.Int64          // bytes reenviados hacia su navegador
+	control    controlCapas
 	publicadas map[string]*Publicada // protegido por sala.mu
+	pubMu      sync.Mutex            // agrupa las capas de simulcast de una misma pista
 	deseados   []string              // vídeos que quiere ver; protegido por sala.mu
 	suscrito   bool                  // ya envió SUSCRIBIR; protegido por sala.mu
 
@@ -62,11 +67,12 @@ func (p *Participante) enviar(mensaje M) {
 
 // crearConexion prepara la RTCPeerConnection antes de recibir la oferta del navegador.
 func (p *Participante) crearConexion(api *webrtc.API, ice []webrtc.ICEServer) error {
-	pc, err := api.NewPeerConnection(webrtc.Configuration{ICEServers: ice, BundlePolicy: webrtc.BundlePolicyMaxBundle})
+	pc, estimador, err := nuevaConexion(api, webrtc.Configuration{ICEServers: ice, BundlePolicy: webrtc.BundlePolicyMaxBundle})
 	if err != nil {
 		return err
 	}
-	p.pc = pc
+	p.pc, p.estimador = pc, estimador
+	go p.vigilarCapas(pc)
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
 		if c == nil {
 			return
@@ -84,7 +90,17 @@ func (p *Participante) crearConexion(api *webrtc.API, ice []webrtc.ICEServer) er
 		if indice < 0 || indice >= len(ordenPublicacion) {
 			return
 		}
-		p.sala.publicar(p, nuevaPublicada(p, ordenPublicacion[indice], remota))
+		// Las capas de simulcast llegan como pistas distintas del mismo receptor: una sola Publicada
+		p.pubMu.Lock()
+		defer p.pubMu.Unlock()
+		tipo := ordenPublicacion[indice]
+		if existente := p.publicadaDe(tipo); existente != nil && existente.receptor == receptor {
+			existente.agregarCapa(remota)
+			return
+		}
+		pub := nuevaPublicada(p, tipo, receptor)
+		pub.agregarCapa(remota)
+		p.sala.publicar(p, pub)
 	})
 	conecto := false
 	pc.OnConnectionStateChange(func(estado webrtc.PeerConnectionState) {
@@ -178,6 +194,8 @@ func (p *Participante) actualizar() {
 		if err != nil {
 			continue
 		}
+		r.enviados = &p.enviados
+		r.preferida = int(p.control.nivel.Load())
 		t, err := p.pc.AddTransceiverFromTrack(r.local, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionSendonly})
 		if err != nil {
 			log.Printf("[Medios] No se pudo crear una ranura: %v", err)
@@ -234,8 +252,11 @@ func leerRTCP(r *Ranura) {
 		for _, paquete := range paquetes {
 			switch paquete.(type) {
 			case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
-				if fuente := r.fuenteActual(); fuente != nil {
-					fuente.pedirClave()
+				r.mu.Lock()
+				fuente, capa := r.fuente, r.capa
+				r.mu.Unlock()
+				if fuente != nil {
+					fuente.pedirClave(capa)
 				}
 			}
 		}
@@ -253,4 +274,13 @@ func (p *Participante) cerrar() {
 	if p.pc != nil {
 		_ = p.pc.Close()
 	}
+}
+
+func (p *Participante) publicadaDe(tipo string) *Publicada {
+	if p.sala == nil {
+		return nil
+	}
+	p.sala.mu.Lock()
+	defer p.sala.mu.Unlock()
+	return p.publicadas[tipo]
 }
