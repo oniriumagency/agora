@@ -174,17 +174,17 @@ Para publicarlo en el Ubuntu de casa: [`despliegue/ubuntu/LEEME.md`](despliegue/
 
 ## Identidad
 
-*Ágora* era la plaza donde los griegos se reunían a conversar y decidir. El símbolo es un
-anfiteatro visto desde arriba (gradas y pasillos, que también se leen como ondas de voz) con el
-escenario en oro. Archivos en `marca/`; la paleta está en `tailwind.config.js`:
+*Ágora* era la plaza donde los griegos se reunían a conversar y decidir. El símbolo es la A de
+Ágora, cuyo interior son las gradas de un anfiteatro (que también se leen como ondas de voz),
+sobre una escalinata. Originales en `marca/logo-dark.svg` (para fondos claros) y
+`marca/logo-light.svg` (para fondos oscuros); la paleta está en `tailwind.config.js`:
 
-| Color | Uso | Hex |
+| Color | Hex | Uso |
 |---|---|---|
-| Azul egeo | acento, botones | `#1F5FA6` · claro `#8DBFEA` |
-| Noche del Egeo | fondo de la sala | `#0F1B2D` · superficies `#18293F`, `#22385A` |
-| Mármol | páginas claras, texto sobre oscuro | `#FAF7F1` · `#F3EEE3` |
-| Oro de ánfora | detalles, greca, avisos | `#D9AE4E` |
-| Terracota | colgar, errores | `#D0603B` |
-| Olivo | apoyo | `#7D8B4E` |
+| Azul Egeo Oscuro | `#1A2432` | Texto principal, tipografía del logo, iconos y fondo de la sala |
+| Blanco Mármol | `#F8F9FA` | Fondo principal de la interfaz |
+| Gris Caliza | `#E2E4E8` | Paneles laterales, modales y bordes sutiles |
+| Terracota Ánfora | `#C55B43` | Botones de acción («Unirse ahora», «Nueva reunión») y avisos |
+| Dorado Cívico | `#D4A373` | Acentos secundarios y estados activos (quién habla, botones encendidos) |
 
 Tipografía de marca: Cinzel (letras de inscripción clásica, licencia OFL), solo en el logotipo.

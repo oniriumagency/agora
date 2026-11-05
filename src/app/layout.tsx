@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: { title: "Ágora", statusBarStyle: "black-translucent" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0F1B2D" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1A2432" };
 
 export default function RaizLayout({ children }: { children: React.ReactNode }) {
   return (

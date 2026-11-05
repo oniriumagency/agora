@@ -59,7 +59,7 @@ export function Tesela({ datos, tamAvatar = 88 }: { datos: DatosTesela; tamAvata
       onDoubleClick={alternarCompleta}
       className={`group relative h-full w-full overflow-hidden bg-sala-tesela transition-shadow ${completa ? "" : "rounded-xl"} ${
         enfocada || completa ? "" : "cursor-pointer"
-      } ${hablando ? "shadow-[inset_0_0_0_3px_#8DBFEA]" : ""}`}
+      } ${hablando ? "shadow-[inset_0_0_0_3px_#D4A373]" : ""}`}
       data-tesela={datos.clave}
       title={enfocada || completa ? undefined : `Ver solo a ${etiqueta}`}
     >

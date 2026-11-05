@@ -8,6 +8,8 @@ body {
 }
 
 body {
+  background-color: #f8f9fa; /* Blanco Mármol */
+  color: #1a2432; /* Azul Egeo Oscuro */
   font-family: "Google Sans", "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

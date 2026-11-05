@@ -4,15 +4,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Paleta griega de Ágora: noche del Egeo para la sala, mármol para las páginas claras,
-        // azul egeo como acento, terracota para colgar y oro de las ánforas para destacar.
-        sala: { fondo: "#0F1B2D", superficie: "#18293F", tesela: "#22385A", borde: "#4B6385", texto: "#F3EEE3", tenue: "#A9B6C8" },
-        acento: { DEFAULT: "#8DBFEA", fuerte: "#1F5FA6", hondo: "#174A84", suave: "#D7E7F6" },
-        peligro: { DEFAULT: "#D0603B", fuerte: "#B44B27" },
-        oro: { DEFAULT: "#D9AE4E", hondo: "#A9822C", suave: "#F4E6C3" },
+        // Paleta de Ágora (ver README):
+        //   Azul Egeo Oscuro #1A2432 · texto, tipografía del logo, iconos y la sala de reunión
+        //   Blanco Mármol    #F8F9FA · fondo principal
+        //   Gris Caliza      #E2E4E8 · paneles, modales y bordes sutiles
+        //   Terracota Ánfora #C55B43 · botones de acción y avisos
+        //   Dorado Cívico    #D4A373 · acentos secundarios y estados activos
+        sala: { fondo: "#1A2432", superficie: "#233041", tesela: "#2C3B50", borde: "#4A5A70", texto: "#F8F9FA", tenue: "#A8B2C0" },
+        // acento: fuerte = terracota (acciones); DEFAULT y suave = dorado (activo, sobre fondo oscuro)
+        acento: { DEFAULT: "#D4A373", fuerte: "#C55B43", hondo: "#A8472F", suave: "#F1DCC7" },
+        // Colgar y errores: un rojo distinto de la terracota de los botones
+        peligro: { DEFAULT: "#C2412D", fuerte: "#9F2F1E" },
+        oro: { DEFAULT: "#D4A373", hondo: "#A8794A", suave: "#F3E6D8" },
         olivo: { DEFAULT: "#7D8B4E", suave: "#E5E9D6" },
-        // Grises cálidos de mármol y piedra, con tinta azul marino en lo más oscuro
-        gray: { 50: "#FAF7F1", 100: "#F3EEE4", 200: "#E7E0D2", 300: "#D4CBBA", 400: "#A9A08F", 500: "#7D776B", 600: "#5D5A53", 700: "#45433F", 800: "#2C2F35", 900: "#142236" },
+        // Grises fríos de mármol y caliza, con el azul egeo oscuro como tinta
+        gray: { 50: "#F8F9FA", 100: "#F0F1F3", 200: "#E2E4E8", 300: "#CBCFD6", 400: "#9AA1AB", 500: "#6E7682", 600: "#525A66", 700: "#3A4350", 800: "#283240", 900: "#1A2432" },
       },
       fontFamily: { marca: ["var(--fuente-marca)", "Georgia", "serif"] },
       keyframes: {
