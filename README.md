@@ -162,7 +162,7 @@ Necesitas Node 22.18 o superior y Go 1.21 o superior (Go descarga solo la versi√
 ```bash
 npm install
 npm run dev      # servidor Go en :8090 y web con recarga en http://localhost:3100
-npm run exe      # dist/AgoraServidor.exe y dist/agora-servidor-linux
+npm run exe      # dist/AgoraServidor.exe y dist/agora-servidor-linux (una etiqueta v* los publica como release)
 npm test         # pruebas del servidor (Go)
 npm run test:e2e # dos navegadores contra http://localhost:8090 (requiere Playwright)
 API_ANTIGUA=1 npm run test:e2e  # lo mismo con la API de cifrado antigua de Chrome

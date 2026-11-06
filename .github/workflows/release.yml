@@ -1,0 +1,44 @@
+# Compila AgoraServidor.exe y el servidor de Linux y los publica como release al subir una etiqueta.
+#   git tag v1.0.1 && git push origin v1.0.1
+# Las notas salen de .github/notas-release.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: "Etiqueta de la release (por ejemplo v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      ETIQUETA: ${{ inputs.etiqueta || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: servidor-go/go.mod
+          cache-dependency-path: servidor-go/go.sum
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run exe
+      - name: Sumas de comprobación
+        working-directory: dist
+        run: sha256sum AgoraServidor.exe agora-servidor-linux agora-ubuntu.tar.gz > SHA256SUMS.txt
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$ETIQUETA" --target "$GITHUB_SHA" --title "Ágora ${ETIQUETA#v}" --notes-file .github/notas-release.md \
+            dist/AgoraServidor.exe dist/agora-servidor-linux dist/agora-ubuntu.tar.gz dist/SHA256SUMS.txt
