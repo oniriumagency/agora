@@ -1,4 +1,4 @@
-# Ágora (web + señalización + servidor de vídeo) en la torre Ubuntu, detrás del Cloudflare Tunnel.
+# Ágora (web + señalización + servidor de vídeo) en un servidor Ubuntu, detrás de un Cloudflare Tunnel o un proxy.
 [Unit]
 Description=Ágora - servidor de reuniones
 After=network-online.target
