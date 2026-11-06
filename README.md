@@ -4,6 +4,8 @@ Reuniones por vídeo al estilo Google Meet con **servidor propio**: cualquiera a
 `AgoraServidor.exe` en su PC, el programa prepara la red y muestra el enlace que hay que
 compartir. Cámara y micrófono, chat, mano alzada, reacciones, pantalla compartida y reuniones grandes.
 
+Página del proyecto: [oniriumagency.github.io/agora](https://oniriumagency.github.io/agora/) (código en `sitio/`).
+
 ## Funciones
 
 - Cámara, micrófono y pantalla compartida, con selector de dispositivos y vista previa antes de entrar.
@@ -69,8 +71,7 @@ Firefox o Safari recientes).
 
 ### Si hay CGNAT (o el router no abre puertos)
 
-Crea `agora.env` junto al `.exe` con tu clave TURN de Cloudflare Realtime (la misma de Kubox
-sirve; plantilla en `despliegue/ubuntu/agora.env.example`):
+Crea `agora.env` junto al `.exe` con tu clave TURN de Cloudflare Realtime (plantilla en `despliegue/ubuntu/agora.env.example`):
 
 ```
 MEET_TURN_CLOUDFLARE_ID=...
@@ -151,6 +152,7 @@ despliegue/ubuntu/  Servicio systemd e instalador para Linux
 scripts/            Desarrollo y construcción de los ejecutables
 pruebas/            Pruebas de extremo a extremo con Playwright
 marca/              Logotipo e iconos
+sitio/              Página de presentación (GitHub Pages)
 ```
 
 ## Desarrollo
@@ -170,7 +172,7 @@ node pruebas/e2e-grande.cjs http://localhost:8090 12   # reunión de 12 con pagi
 Opciones del servidor: `AgoraServidor.exe --help` (puertos, sin túnel, sin UPnP, URL pública
 propia, máximos por sala…).
 
-Para publicarlo en el Ubuntu de casa: [`despliegue/ubuntu/LEEME.md`](despliegue/ubuntu/LEEME.md).
+Para publicarlo en un servidor Ubuntu: [`despliegue/ubuntu/LEEME.md`](despliegue/ubuntu/LEEME.md).
 
 ## Identidad
 
@@ -188,3 +190,10 @@ sobre una escalinata. Originales en `marca/logo-dark.svg` (para fondos claros) y
 | Dorado Cívico | `#D4A373` | Acentos secundarios y estados activos (quién habla, botones encendidos) |
 
 Tipografía de marca: Cinzel (letras de inscripción clásica, licencia OFL), solo en el logotipo.
+
+## Licencia
+
+Ágora es software libre bajo la [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+Puedes usarlo, estudiarlo, modificarlo y redistribuirlo; si ofreces una versión modificada como
+servicio a otras personas, debes publicar también su código. La fuente Cinzel tiene su propia
+licencia (SIL OFL 1.1, ver `src/app/fuentes/LICENCIA.txt`).

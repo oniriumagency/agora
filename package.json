@@ -2,6 +2,7 @@
   "name": "agora",
   "version": "1.0.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "description": "Reuniones por vídeo con servidor propio (SFU en un .exe): chat, mano alzada y pantalla compartida",
   "engines": {
     "node": ">=22.18.0"

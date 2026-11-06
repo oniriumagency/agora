@@ -1,7 +1,7 @@
 // Compila la web (exportación estática), la copia dentro del servidor Go y genera los ejecutables:
 //   dist/AgoraServidor.exe            (Windows)
 //   dist/agora-servidor-linux          (Ubuntu u otro Linux x64)
-//   dist/agora-ubuntu.tar.gz           (servidor Linux + instalador para la torre)
+//   dist/agora-ubuntu.tar.gz           (servidor Linux + instalador para Ubuntu)
 // Requiere Go 1.21+ (https://go.dev/dl/; descarga sola la versión del proyecto). Uso: npm run exe  [-- --solo-windows]
 import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";

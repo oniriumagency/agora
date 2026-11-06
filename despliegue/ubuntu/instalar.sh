@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Instala o actualiza Ágora en la torre Ubuntu (detrás del Cloudflare Tunnel magne-homelab).
+# Instala o actualiza Ágora en un servidor Ubuntu (por ejemplo, detrás de un Cloudflare Tunnel).
 # Uso, dentro de la carpeta descomprimida de agora-ubuntu.tar.gz:
-#   sudo bash instalar.sh                      # dominio por defecto: agora.onirium.agency
-#   sudo bash instalar.sh otro.dominio.com     # otro dominio
+#   sudo bash instalar.sh agora.tudominio.com  # primera vez: el dominio público
+#   sudo bash instalar.sh                      # actualizar: conserva el dominio ya configurado
 # Si junto a este script hay un agora.env (o el kubox-meet.env de Windows), se usan sus claves TURN.
 set -euo pipefail
-DOMINIO="${1:-agora.onirium.agency}"
 RAIZ=/opt/agora
+DOMINIO="${1:-}"
+if [[ -z "$DOMINIO" && -f "$RAIZ/agora.env" ]]; then
+  DOMINIO="$(grep -E '^MEET_URL_PUBLICA=' "$RAIZ/agora.env" | tail -1 | cut -d= -f2- | tr -d '\r' | sed -E 's|^https?://||; s|/.*$||')"
+fi
+[[ -n "$DOMINIO" ]] || { echo "Indica el dominio público: sudo bash instalar.sh agora.tudominio.com" >&2; exit 1; }
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 
 [[ $EUID -eq 0 ]] || { echo "Ejecuta con sudo: sudo bash instalar.sh" >&2; exit 1; }
@@ -65,7 +69,7 @@ grep -q "^MEET_TURN_CLOUDFLARE_TOKEN=." "$RAIZ/agora.env" || echo "!! Falta el T
 cat <<FIN
 
 Último paso, en Cloudflare (una sola vez):
-  Zero Trust > Networks > Tunnels > magne-homelab > Public Hostname > Add
+  Zero Trust > Networks > Tunnels > (tu túnel) > Public Hostname > Add
     Subdomain: ${DOMINIO%%.*}   Domain: ${DOMINIO#*.}   Service: HTTP  localhost:8090
   Cloudflare crea el DNS solo. Luego abre https://$DOMINIO
 
